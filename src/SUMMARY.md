@@ -31,3 +31,13 @@
 - [REST API Project](./projects/RestAPI/README.md)
 
 
+# Informative Lecture Notes
+
+- [How Internet Works](./informative_lectures/how_internet_works/README.md)
+    - [URI/URL](./informative_lectures/how_internet_works/uri_url.md)
+    - [Request Response Cycle](./informative_lectures/how_internet_works/request_response_cycle.md)
+    - [What is Frontend Dev/ Client Side](./informative_lectures/how_internet_works/frontend_dev_client_side.md)
+    - [What is Backend Dev/ API/ Server Side](./informative_lectures/how_internet_works/backend_dev_server_side.md)
+    - [HTTP-1/2/3, HTTPS](./informative_lectures/how_internet_works/http_123_https.md)
+    - [Quiz-12: Internet Quiz](./informative_lectures/how_internet_works/quiz_12_internet_quiz.md)
+    
