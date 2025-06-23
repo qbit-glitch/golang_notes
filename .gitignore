@@ -1,1 +1,6 @@
 book
+advanced/main.test
+advanced/mem.pprof
+mdbook_summary.go
+summary.txt
+topics.txt

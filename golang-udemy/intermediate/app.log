@@ -1,0 +1,12 @@
+INFO: 2025/06/14 19:25:37 standard_logging.go:38: This is an info message.
+ERROR: 2025/06/14 19:25:37 standard_logging.go:39: This is an error message.
+WARNING: 2025/06/14 19:25:37 standard_logging.go:40: This is a warning message
+DEBUG: 2025/06/14 19:25:37 standard_logging.go:41: THis is a debug message.
+INFO: 2025/06/14 19:25:51 standard_logging.go:38: This is an info message.
+ERROR: 2025/06/14 19:25:51 standard_logging.go:39: This is an error message.
+WARNING: 2025/06/14 19:25:51 standard_logging.go:40: This is a warning message
+DEBUG: 2025/06/14 19:25:51 standard_logging.go:41: THis is a debug message.
+INFO: 2025/06/14 19:26:04 standard_logging.go:38: This is an info message.
+ERROR: 2025/06/14 19:26:04 standard_logging.go:39: This is an error message.
+WARNING: 2025/06/14 19:26:04 standard_logging.go:40: This is a warning message
+DEBUG: 2025/06/14 19:26:04 standard_logging.go:41: THis is a debug message.
