@@ -12,10 +12,12 @@ import (
 func main(){
 	http.HandleFunc("/orders", func(w http.ResponseWriter, r *http.Request){
 		fmt.Fprintf(w, "Handling incoming orders")
+		logRequestDetails(r)
 	})
 
 	http.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request){
 		fmt.Fprintf(w, "Handling users")
+		logRequestDetails(r)
 	})
 	port := 3000
 
@@ -43,6 +45,30 @@ func main(){
 	if err != nil {
 		log.Fatalln("Could not start server:", err)
 	}
+}
 
+func logRequestDetails(r *http.Request){
+    httpVersion := r.Proto
+	fmt.Println("Received request with HTTP Version:", httpVersion)
+	if r.TLS != nil {
+		tlsVersion := getTLSVersionName(r.TLS.Version)
+		fmt.Println("Received request with TLS version:", tlsVersion)
+	} else {
+		fmt.Println("Received request without TLS")
+	}
+}
 
+func getTLSVersionName(version uint16) string {
+	switch version {
+	case tls.VersionTLS10:
+		return "TLS 1.0"
+	case tls.VersionTLS11:
+		return "TLS 1.1"
+	case tls.VersionTLS12:
+		return "TLS 1.2"
+	case tls.VersionTLS13:
+		return "TLS 1.3"
+	default:
+		return "Unknown TLS version"
+	}
 }
