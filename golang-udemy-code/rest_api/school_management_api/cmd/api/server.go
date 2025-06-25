@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 )
 
 type User struct {
@@ -12,49 +13,107 @@ type User struct {
 	City string `json:"city"`
 }
 
+func rootHandler(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Hello Root Route"))
+	fmt.Println("Hello Root Route")
+}
+
+func teachersHandler(w http.ResponseWriter, r *http.Request) {
+	// Find out what kind of http method that is sent with the request
+	fmt.Println(r.Method)
+
+	switch r.Method {
+	case http.MethodGet:
+
+		fmt.Println(r.URL.Path)
+		path := strings.TrimPrefix(r.URL.Path, "/teachers/")
+		userID := strings.TrimSuffix(path, "/")
+
+		fmt.Println("UserID:", userID)
+
+
+		w.Write([]byte("Hello GET method Teachers Route"))
+		return
+	case http.MethodPost:
+		w.Write([]byte("Hello POST method Teachers Route"))
+		return
+	case http.MethodPut:
+		w.Write([]byte("Hello PUT method Teachers Route"))
+		return
+	case http.MethodPatch:
+		w.Write([]byte("Hello PATCH method Teachers Route"))
+		return
+	case http.MethodDelete:
+		w.Write([]byte("Hello DELETE method Teachers Route"))
+		return
+	}
+
+	w.Write([]byte("Hello Teachers Route"))
+	fmt.Println("Hello Teachers Route")
+}
+
+func execsHandler(w http.ResponseWriter, r *http.Request) {
+	// Find out what kind of http method that is sent with the request
+	fmt.Println(r.Method)
+
+	switch r.Method {
+	case http.MethodGet:
+		w.Write([]byte("Hello GET method Execs Route"))
+		return
+	case http.MethodPost:
+		w.Write([]byte("Hello POST method Execs Route"))
+		return
+	case http.MethodPut:
+		w.Write([]byte("Hello PUT method Execs Route"))
+		return
+	case http.MethodPatch:
+		w.Write([]byte("Hello PATCH method Execs Route"))
+		return
+	case http.MethodDelete:
+		w.Write([]byte("Hello DELETE method Execs Route"))
+		return
+	}
+
+	w.Write([]byte("Hello Execs Route"))
+	fmt.Println("Hello Execs Route")
+}
+
+func studentsHandler(w http.ResponseWriter, r *http.Request) {
+	// Find out what kind of http method that is sent with the request
+	fmt.Println(r.Method)
+
+	switch r.Method {
+	case http.MethodGet:
+		w.Write([]byte("Hello GET method Students Route"))
+		return
+	case http.MethodPost:
+		w.Write([]byte("Hello POST method Students Route"))
+		return
+	case http.MethodPut:
+		w.Write([]byte("Hello PUT method Students Route"))
+		return
+	case http.MethodPatch:
+		w.Write([]byte("Hello PATCH method Students Route"))
+		return
+	case http.MethodDelete:
+		w.Write([]byte("Hello DELETE method Students Route"))
+		return
+	}
+
+	w.Write([]byte("Hello Students Route"))
+	fmt.Println("Hello Students Route")
+}
+
 func main() {
 
 	port := ":3000"
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Hello Root Route"))
-		fmt.Println("Hello Root Route")
-	})
+	http.HandleFunc("/", rootHandler)
 
-	http.HandleFunc("/teachers", func(w http.ResponseWriter, r *http.Request) {
-		// Find out what kind of http method that is sent with the request
-		fmt.Println(r.Method)
+	http.HandleFunc("/teachers/", teachersHandler)
 
-		switch r.Method {
-		case http.MethodGet:
-			w.Write([]byte("Hello GET method Teachers Route"))
-			return
-		case http.MethodPost:
-			w.Write([]byte("Hello POST method Teachers Route"))
-			return
-		case http.MethodPut:
-			w.Write([]byte("Hello PUT method Teachers Route"))
-			return
-		case http.MethodPatch:
-			w.Write([]byte("Hello PATCH method Teachers Route"))
-			return
-		case http.MethodDelete:
-			w.Write([]byte("Hello DELETE method Teachers Route"))
-			return
-		}
+	http.HandleFunc("/students/", studentsHandler)
 
-		w.Write([]byte("Hello Teachers Route"))
-		fmt.Println("Hello Teachers Route")
-	})
-
-	http.HandleFunc("/students", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Hello Students Route"))
-		fmt.Println("Hello Students Route")
-	})
-
-	http.HandleFunc("/execs", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Hello Execs Route"))
-		fmt.Println("Hello Execs Route")
-	})
+	http.HandleFunc("/execs/", execsHandler)
 
 	fmt.Println("Server is running on port:", port)
 	err := http.ListenAndServe(port, nil)
