@@ -29,6 +29,7 @@
 # Projects
 
 - [REST API Project](./projects/RestAPI/README.md)
+    - [API Planning](./projects/RestAPI/api_planning.md)
 
 
 # Informative Lecture Notes
@@ -41,3 +42,5 @@
     - [HTTP-1/2/3, HTTPS](./informative_lectures/how_internet_works/http_123_https.md)
     - [Quiz-12: Internet Quiz](./informative_lectures/how_internet_works/quiz_12_internet_quiz.md)
     
+
+
