@@ -1,0 +1,3 @@
+# Benchmarking HTTP1.1 vs HTTP2 - H2Load BM Tool
+
+Go's HTTP server automatically enables http2 by default when we use `ListenAndServeTLS`. So when we are creating a TLS server, a secure server then in that case Go by default makes your API into http2 API. However, external package like `net/http2` package, allows for more advanced configuration and control over http2 features. We can customize and fine tune our http2 server using the http2 package in a much more refined way.
