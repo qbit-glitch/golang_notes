@@ -6,6 +6,12 @@ import (
 	"net/http"
 )
 
+type User struct {
+	Name string `json:"name"`
+	Age  string `json:"age"`
+	City string `json:"city"`
+}
+
 func main() {
 
 	port := ":3000"
@@ -22,14 +28,14 @@ func main() {
 		case http.MethodGet:
 			w.Write([]byte("Hello GET method Teachers Route"))
 			return
+		case http.MethodPost:
+			w.Write([]byte("Hello POST method Teachers Route"))
+			return
 		case http.MethodPut:
 			w.Write([]byte("Hello PUT method Teachers Route"))
 			return
 		case http.MethodPatch:
 			w.Write([]byte("Hello PATCH method Teachers Route"))
-			return
-		case http.MethodPost:
-			w.Write([]byte("Hello POST method Teachers Route"))
 			return
 		case http.MethodDelete:
 			w.Write([]byte("Hello DELETE method Teachers Route"))
