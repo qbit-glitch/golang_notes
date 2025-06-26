@@ -31,6 +31,17 @@ func teachersHandler(w http.ResponseWriter, r *http.Request) {
 
 		fmt.Println("UserID:", userID)
 
+		// teachers/?key=value&query=value2&sortby=email&sortorder=ASC
+
+		queryParams := r.URL.Query()
+		fmt.Println("Query Params:", queryParams)
+		sortby := queryParams.Get("sortby")
+		key := queryParams.Get("key")
+		sortorder := queryParams.Get("sortorder")
+		if sortorder == ""{
+			sortorder = "DESC"
+		}
+		fmt.Printf("Sortby: %v | Sort Order: %v | Key: %v", sortby, sortorder, key)
 
 		w.Write([]byte("Hello GET method Teachers Route"))
 		return
