@@ -17,3 +17,47 @@ When you might not need Compression Middleware:
 
 In conclusion, implementing compression middleware in your Go application can lead to significant performance improvements by reducing response sizes, lowering bandwidth usage, and enhancing the user experience. It can be easily integrated into your http server setup and is especially useful for applications serving large or static content.
 
+```go
+package middlewares
+
+import (
+	"compress/gzip"
+	"fmt"
+	"net/http"
+	"strings"
+)
+
+func Compression(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Check if the client accepts gzip encoding
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip"){
+			next.ServeHTTP(w,r)
+		}
+
+		// Set the response header
+		w.Header().Set("Content-Encoding", "gzip")
+		gz := gzip.NewWriter(w)
+		defer gz.Close()
+
+		// Wrap the ResponseWriter
+		w = &gzipResponseWriter{
+			ResponseWriter: w,
+			Writer: gz,
+		}
+
+		next.ServeHTTP(w,r)
+		fmt.Println("Sent from Compression Middleware")
+
+	})
+}
+
+type gzipResponseWriter struct {
+	http.ResponseWriter
+	Writer *gzip.Writer
+}
+
+func (g *gzipResponseWriter) Write(b []byte) (int, error){
+	return g.Writer.Write(b)
+}
+```
+
