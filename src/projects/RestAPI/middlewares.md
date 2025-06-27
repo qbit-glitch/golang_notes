@@ -22,3 +22,14 @@ type Handler interface{
 ```
 - Middleware Pattern
 - Chaining Handlers
+
+
+### Structure of a Middleware :
+```go
+func MiddlwareName(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		next.ServeHTTP(w,r)
+	})
+}
+```

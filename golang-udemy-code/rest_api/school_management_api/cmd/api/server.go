@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"school_management_api/internal/api/middlewares"
 )
 
 type User struct {
@@ -103,11 +104,10 @@ func main() {
 
 	// create custom server
 	server := &http.Server{
-		Addr: port,
-		Handler: mux,
+		Addr:      port,
+		Handler:   middlewares.SecurityHeaders(mux),
 		TLSConfig: tlsConfig,
 	}
-
 
 	fmt.Println("Server is running on port:", port)
 	err := server.ListenAndServeTLS(cert, key)
