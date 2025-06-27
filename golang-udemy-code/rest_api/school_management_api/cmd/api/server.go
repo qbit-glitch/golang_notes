@@ -107,7 +107,7 @@ func main() {
 		Addr:      port,
 		// Handler: mux
 		// Handler:   middlewares.SecurityHeaders(mux),
-		Handler: middlewares.Cors(mux),
+		Handler: middlewares.ResponseTimeMiddleware(middlewares.Cors(mux)),
 		TLSConfig: tlsConfig,
 	}
 
