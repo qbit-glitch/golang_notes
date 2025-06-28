@@ -8,7 +8,9 @@ import (
 )
 
 func Compression(next http.Handler) http.Handler {
+	fmt.Println("Compression Middleware")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("Compression Middleware being returned ...")
 		// Check if the client accepts gzip encoding
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip"){
 			next.ServeHTTP(w,r)
@@ -27,6 +29,7 @@ func Compression(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w,r)
 		fmt.Println("Sent from Compression Middleware")
+		fmt.Println("Compression Middleware ends ...")
 
 	})
 }
