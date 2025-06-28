@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"school_management_api/internal/api/middlewares"
+	mw "school_management_api/internal/api/middlewares"
 	"time"
 )
 
@@ -49,6 +49,16 @@ func execsHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		w.Write([]byte("Hello GET method Execs Route"))
 	case http.MethodPost:
+		fmt.Println("Query:", r.URL.Query())
+		fmt.Println("Name:", r.URL.Query().Get("name"))
+
+		// Parse form data (necessary for x-www-form-urlencoded)
+		err := r.ParseForm()
+		if err != nil {
+			return
+		}
+		fmt.Println("Form from POST Method:", r.Form)
+
 		w.Write([]byte("Hello POST method Execs Route"))
 	case http.MethodPut:
 		w.Write([]byte("Hello PUT method Execs Route"))
@@ -90,27 +100,32 @@ func main() {
 	key := "key.pem"
 
 	mux := http.NewServeMux()
-
 	mux.HandleFunc("/", rootHandler)
-
 	mux.HandleFunc("/teachers/", teachersHandler)
-
-	mux.HandleFunc("/students/", studentsHandler)
-
+	mux.HandleFunc("/students/", studentsHandler) 
 	mux.HandleFunc("/execs/", execsHandler)
 
 	tlsConfig := &tls.Config{
 		MinVersion: tls.VersionTLS12,
 	}
 
-	rl := middlewares.NewRateLimiter(5, time.Minute)
+	rl := mw.NewRateLimiter(5, time.Minute)
+
+	hppOptions := mw.HPPOptions {
+		CheckQuery: true,
+		CheckBody: true,
+		CheckBodyOnlyForContentType: "application/x-www-form-urlencoded",
+		Whitelist: []string{"allowedParam"},
+	}
+
+	secureMux := mw.Hpp(hppOptions)(rl.Middleware(mw.Compression(mw.ResponseTimeMiddleware(mw.SecurityHeaders(mw.Cors(mux))))))
 
 	// create custom server
 	server := &http.Server{
 		Addr:      port,
 		// Handler: mux
-		// Handler:   middlewares.SecurityHeaders(mux),
-		Handler: rl.Middleware(middlewares.Compression(middlewares.ResponseTimeMiddleware(middlewares.Cors(mux)))),
+		// Handler:   mw.SecurityHeaders(mux),
+		Handler: secureMux,
 		TLSConfig: tlsConfig,
 	}
 
