@@ -7,3 +7,27 @@
 `WHERE 1=1` also simplify the code for adding filters. Without  `WHERE 1=1`, you would need to check if the WHERE clause already exists before adding `AND` for each filter which adds extra complexity. And using this `WHERE 1=1`, we can actually handle multiple filters.
 
 In conclusion, using `WHERE 1=1` is a common practice for making dynamic query buliding more straightformward. It avoids the need for complex conditional logic when appending multiple filter conditions, making your code cleaner and easier to maintain.
+
+
+## Advanced Filtering Technique: GET - Getting entries based on multiple criteria
+
+```go
+func addFilters(r *http.Request, query string, args []interface{}) (string, []interface{}) {
+	params := map[string]string{
+		"first_name": "first_name",
+		"last_name":  "last_name",
+		"email":      "email",
+		"class":      "class",
+		"subject":    "subject",
+	}
+
+	for param, dbField := range params {
+		value := r.URL.Query().Get(param)
+		if value != "" {
+			query += " AND " + dbField + " = ?"
+			args = append(args, value)
+		}
+	}
+	return query, args
+}
+```
