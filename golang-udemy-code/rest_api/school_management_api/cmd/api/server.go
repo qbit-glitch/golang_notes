@@ -7,11 +7,18 @@ import (
 	"net/http"
 	mw "school_management_api/internal/api/middlewares"
 	"school_management_api/internal/api/router"
+	"school_management_api/internal/repository/sqlconnect"
 	"school_management_api/pkg/utils"
 	"time"
 )
 
 func main() {
+
+	_, err := sqlconnect.ConnectDb("dbeaver_testdb")
+	if err != nil {
+		fmt.Println("Error :", err)
+		return
+	}
 
 	port := ":3000"
 	cert := "cert.pem"
@@ -44,7 +51,7 @@ func main() {
 	}
 
 	fmt.Println("Server is running on port:", port)
-	err := server.ListenAndServeTLS(cert, key)
+	err = server.ListenAndServeTLS(cert, key)
 	if err != nil {
 		log.Fatalln("Error starting the server:", err)
 	}
