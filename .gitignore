@@ -7,3 +7,4 @@ topics.txt
 node_modules
 cert.pem
 key.pem
+.env

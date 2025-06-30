@@ -10,11 +10,17 @@ import (
 	"school_management_api/internal/repository/sqlconnect"
 	"school_management_api/pkg/utils"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
 
-	_, err := sqlconnect.ConnectDb("dbeaver_testdb")
+	err := godotenv.Load()
+	if err != nil {
+		return
+	}
+	_, err = sqlconnect.ConnectDb()
 	if err != nil {
 		fmt.Println("Error :", err)
 		return
