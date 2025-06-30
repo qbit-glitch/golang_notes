@@ -4,21 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"school_management_api/internal/models"
+	"school_management_api/internal/repository/sqlconnect"
 	"strconv"
 	"strings"
-	"sync"
+	// "sync"
 )
 
-type Teacher struct {
-	ID        int    `json:"id"`
-	FirstName string `json:"first_name,omitempty"`
-	LastName  string `json:"last_name,omitempty"`
-	Class     string `json:"class,omitempty"`
-	Subject   string `json:"subject,omitempty"`
-}
+var teachers = make(map[int]models.Teacher)
 
-var teachers = make(map[int]Teacher)
-var mutex = &sync.Mutex{}
+// var mutex = &sync.Mutex{}
 var nextID = 1
 
 type User struct {
@@ -29,7 +24,7 @@ type User struct {
 
 // Initialize some dummy data
 func init() {
-	teachers[nextID] = Teacher{
+	teachers[nextID] = models.Teacher{
 		ID:        nextID,
 		FirstName: "John",
 		LastName:  "Doe",
@@ -37,7 +32,7 @@ func init() {
 		Subject:   "Math",
 	}
 	nextID++
-	teachers[nextID] = Teacher{
+	teachers[nextID] = models.Teacher{
 		ID:        nextID,
 		FirstName: "James",
 		LastName:  "Smith",
@@ -45,7 +40,7 @@ func init() {
 		Subject:   "Algebra",
 	}
 	nextID++
-	teachers[nextID] = Teacher{
+	teachers[nextID] = models.Teacher{
 		ID:        nextID,
 		FirstName: "Jane",
 		LastName:  "Doe",
@@ -65,16 +60,16 @@ func getTeachersHandler(w http.ResponseWriter, r *http.Request) {
 		firstName := r.URL.Query().Get("first_name")
 		lastName := r.URL.Query().Get("last_name")
 
-		teacherList := make([]Teacher, 0, len(teachers))
+		teacherList := make([]models.Teacher, 0, len(teachers))
 		for _, teacher := range teachers {
 			if (firstName == "" || teacher.FirstName == firstName) && (lastName == "" || teacher.LastName == lastName) {
 				teacherList = append(teacherList, teacher)
 			}
 		}
 		response := struct {
-			Status string    `json:"status"`
-			Count  int       `json:"count"`
-			Data   []Teacher `json:"data"`
+			Status string           `json:"status"`
+			Count  int              `json:"count"`
+			Data   []models.Teacher `json:"data"`
 		}{
 			Status: "success",
 			Count:  len(teacherList),
@@ -100,31 +95,51 @@ func getTeachersHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func addTeacherHandler(w http.ResponseWriter, r *http.Request) {
-	mutex.Lock()
-	defer mutex.Unlock()
 
-	var newTeachers []Teacher
-	err := json.NewDecoder(r.Body).Decode(&newTeachers)
+	db, err := sqlconnect.ConnectDb()
+	if err != nil {
+		http.Error(w, "Error connecting to database", http.StatusInternalServerError)
+		return
+	}
+	defer db.Close()
+
+	var newTeachers []models.Teacher
+	err = json.NewDecoder(r.Body).Decode(&newTeachers)
 	if err != nil {
 		http.Error(w, "Invalid Request Body", http.StatusBadRequest)
 		return
 	}
 
-	addedTeachers := make([]Teacher, len(newTeachers))
+	stmt, err := db.Prepare("INSERT INTO teachers (first_name, last_name, email, class, subject) VALUES (?,?,?,?,?)")
+	if err != nil {
+		http.Error(w, "Error in preparing SQL query", http.StatusInternalServerError)
+		return
+	}
+	defer stmt.Close()
+
+	addedTeachers := make([]models.Teacher, len(newTeachers))
 	for i, newTeacher := range newTeachers {
-		newTeacher.ID = nextID
-		teachers[nextID] = newTeacher
+		res, err := stmt.Exec(newTeacher.FirstName, newTeacher.LastName, newTeacher.Email, newTeacher.Class, newTeacher.Subject)
+		if err != nil {
+			http.Error(w, "Error inserting data into database", http.StatusInternalServerError)
+			return
+		}
+		lastID, err := res.LastInsertId()
+		if err != nil {
+			http.Error(w, "Error getting last insert ID", http.StatusInternalServerError)
+			return
+		}
+		newTeacher.ID = int(lastID)
 		addedTeachers[i] = newTeacher
-		nextID++
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
 	response := struct {
-		Status string    `json:"status"`
-		Count  int       `json:"count"`
-		Data   []Teacher `json:"data"`
+		Status string           `json:"status"`
+		Count  int              `json:"count"`
+		Data   []models.Teacher `json:"data"`
 	}{
 		Status: "success",
 		Count:  len(addedTeachers),
@@ -133,7 +148,6 @@ func addTeacherHandler(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(response)
 }
-
 
 func TeachersHandler(w http.ResponseWriter, r *http.Request) {
 	// Find out what kind of http method that is sent with the request
@@ -145,7 +159,7 @@ func TeachersHandler(w http.ResponseWriter, r *http.Request) {
 		getTeachersHandler(w, r)
 
 	case http.MethodPost:
-		addTeacherHandler(w,r)
+		addTeacherHandler(w, r)
 
 	case http.MethodPut:
 		w.Write([]byte("Hello PUT method Teachers Route"))
