@@ -1,0 +1,17 @@
+# Creating our SQL database
+
+```sql
+CREATE DATABASE IF NOT EXISTS school;
+
+USE school;
+
+CREATE TABLE IF NOT EXISTS teachers(
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	first_name VARCHAR(255) NOT NULL,
+	last_name VARCHAR(255) NOT NULL,
+	email VARCHAR(255) UNIQUE NOT NULL,
+	class VARCHAR(255) NOT NULL,
+	subject VARCHAR(255) NOT NULL,
+	INDEX (email)
+) AUTO_INCREMENT=100;
+```

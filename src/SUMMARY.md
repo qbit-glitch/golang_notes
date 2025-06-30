@@ -59,6 +59,10 @@
     - [HPP Middleware](./projects/RestAPI/hpp_middlewares.md)
 
 
+
+    - [Creating our SQL Database](./projects/RestAPI/create_db_script.md)
+
+
 # Informative Lecture Notes
 
 - [How Internet Works](./informative_lectures/how_internet_works/README.md)
