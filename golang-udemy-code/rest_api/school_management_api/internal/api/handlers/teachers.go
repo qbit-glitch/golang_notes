@@ -309,11 +309,11 @@ func patchTeachersHandler(w http.ResponseWriter, r *http.Request) {
 	for k, v := range updates {
 
 		for i := 0; i < teacherVal.NumField(); i++ {
-			
+
 			field := teacherType.Field(i)
 			// fmt.Println("field:", field)
 
-			if field.Tag.Get("json") == k + ",omitempty" {
+			if field.Tag.Get("json") == k+",omitempty" {
 				if teacherVal.Field(i).CanSet() {
 
 					// fmt.Println("teacherVal.Field(i):", teacherVal.Field(i))
@@ -337,13 +337,64 @@ func patchTeachersHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func deleteTeachersHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := strings.TrimPrefix(r.URL.Path, "/teachers/")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Invalid Teacher ID", http.StatusBadRequest)
+		return
+	}
+
+	db, err := sqlconnect.ConnectDb()
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Unable to connect to database", http.StatusInternalServerError)
+		return
+	}
+	defer db.Close()
+
+	result, err := db.Exec("DELETE FROM teachers WHERE id = ?", id)
+	if err != nil {
+		http.Error(w, "Error deleting teacher", http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Println(result.RowsAffected())
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		http.Error(w, "Error retrieving delete result", http.StatusInternalServerError)
+		return
+	}
+
+	if rowsAffected == 0 {
+		http.Error(w, "Teacher not found", http.StatusNotFound)
+		return
+	}
+
+	// Response Body -> Optional
+	w.Header().Set("Content-Type", "application/json")
+	response := struct {
+		Status string `json:"status"`
+		ID     int    `json:"id"`
+	}{
+		Status: "Teacher deleted successfully",
+		ID:     id,
+	}
+	json.NewEncoder(w).Encode(response)
+
+	// Return status of NoContent -> Compulsory
+	w.WriteHeader(http.StatusNoContent)
+
+}
+
 func TeachersHandler(w http.ResponseWriter, r *http.Request) {
 	// Find out what kind of http method that is sent with the request
 	fmt.Println(r.Method)
 
 	switch r.Method {
 	case http.MethodGet:
-		// call get Handler function
 		getTeachersHandler(w, r)
 
 	case http.MethodPost:
@@ -353,10 +404,10 @@ func TeachersHandler(w http.ResponseWriter, r *http.Request) {
 		updateTeacherHandler(w, r)
 
 	case http.MethodPatch:
-		patchTeachersHandler(w,r)
+		patchTeachersHandler(w, r)
 
 	case http.MethodDelete:
-		w.Write([]byte("Hello DELETE method Teachers Route"))
+		deleteTeachersHandler(w, r)
 	}
 
 	w.Write([]byte("Hello Teachers Route"))
