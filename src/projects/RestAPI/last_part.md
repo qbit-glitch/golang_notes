@@ -632,3 +632,95 @@ func PatchTeachersHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 ```
+
+## Deleting Multiple Entries : Delete
+
+```go
+
+func DeleteTeachersHandler(w http.ResponseWriter, r *http.Request){
+	db, err := sqlconnect.ConnectDb()
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Unable to connect to database", http.StatusInternalServerError)
+		return
+	}
+	defer db.Close()
+
+	var ids []int
+	err = json.NewDecoder(r.Body).Decode(&ids)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Error starting transaction", http.StatusInternalServerError)
+		return
+	}
+
+	stmt, err := tx.Prepare("DELETE FROM teachers WHERE id = ?")
+	if err != nil {
+		log.Println(err)
+		tx.Rollback()
+		http.Error(w, "Error preparing delete statement", http.StatusInternalServerError)
+		return
+	}
+	defer stmt.Close()
+
+	deleteIds := []int{}
+
+	for _, id := range ids {
+		result, err := stmt.Exec(id)
+		if err != nil {
+			tx.Rollback()
+			log.Println(err)
+			http.Error(w, "Error deleting teacher", http.StatusInternalServerError)
+			return
+		}
+
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			tx.Rollback()
+			http.Error(w, "Error retrieving deleted result", http.StatusInternalServerError)
+			return
+		}
+
+		// If teacher was deleted then add ID to the deletedIDs slice
+		if rowsAffected > 0{
+			deleteIds = append(deleteIds, id)
+		}
+
+		if rowsAffected < 1 {
+			tx.Rollback()
+			http.Error(w, fmt.Sprintf("ID %d does not exist",id), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Commit
+	err = tx.Commit()
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Error Commiting transaction", http.StatusInternalServerError)
+		return
+	}
+	
+	if len(deleteIds) < 1 {
+		http.Error(w, "IDs do not exist", http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	response := struct {
+		Status string `json:"status"`
+		DeletedIDs []int `json:"deleted_ids"`
+	}{
+		Status: "Teachers successfully deleted",
+		DeletedIDs: deleteIds,
+	}
+	json.NewEncoder(w).Encode(response)
+}
+```
