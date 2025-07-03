@@ -724,3 +724,61 @@ func DeleteTeachersHandler(w http.ResponseWriter, r *http.Request){
 	json.NewEncoder(w).Encode(response)
 }
 ```
+
+## Modelling Data
+
+In API development, a model represents the structure of a data that your application handles. Models define the shape of the data, including the types of each field,relationships between different data types and any constraints or validations. Models provide a clear and structured way to represent the data in our application. This helps in maintaining consistency and understanding the data flow. By defining models, we can enfore validation rulesm ensuring that the data entering your system is in the expected format. Models act as an abstraction layer between the database and the application logic. This makes the application more modular and easier to maintain.
+
+Proper use of models can prevent common security issues like SQL injection by ensuring that data is correctly sanitized and validated. When handling APi request, we can use models to ensure data is correctly parsed and validated.
+
+Models are used for
+- Data Representation
+- Data Validation
+- Abstraction
+- Documentation
+- Security
+
+Industry Standards for Models:
+- Naming Conventions
+- Field Tags
+- Validation
+- Modularity
+
+Importance
+- Data integrity
+- Maintainability
+- Scalability
+- Security
+
+What happens if we don't use Models ?
+- Inconsistent Data
+- Code Duplication
+- Difficult Maintenance
+- Security Risks
+
+***Best Practices***
+- Keep Models Simple
+- Use Field Tags
+- Document Models
+- Versioning
+
+***Common Pitfalls***
+- Tight Coupling
+- Overcomplicating Models
+- Ignoring Validation
+- Lack of Documentation
+
+The concept of Data Modelling is simple. Data Modelling takes unstructured data and then transforms it into a structured data. In Go, we are using struct to structure that unstructured data.
+
+`models/student.go`
+```go
+package models
+
+type Student struct {
+	ID int `json:"id,omitempty"`
+	FirstName string `json:"first_name,omitempty"`
+	LastName string `json:"last_name,omitempty"`
+	Email string `json:"email,omitempty"`
+	Class string `json:"class,omitempty"`
+}
+```
