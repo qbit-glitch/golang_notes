@@ -362,3 +362,39 @@ func main() {
 	http.ListenAndServe(":8080", mux)
 }
 ```
+
+## Refactoring MUX
+
+There should me only a single space between the http method and your route. If there is no space or more than one space, our application will not recognize the `DELETE` method associates with this route.
+
+```go
+mux.HandleFunc("DELETE /teachers/", handlers.TeachersHandler)
+```
+For now we are focusing on only the `/teachers/` route. So the `router.go` will now look like this:
+```go
+package router
+
+import (
+	"net/http"
+	"school_management_api/internal/api/handlers"
+)
+
+func Router() *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", handlers.RootHandler)
+	
+	mux.HandleFunc("GET /teachers/", handlers.TeachersHandler)
+	mux.HandleFunc("GET /teachers/{id}", handlers.TeachersHandler)
+	mux.HandleFunc("POST /teachers/", handlers.TeachersHandler)
+	mux.HandleFunc("PUT /teachers/", handlers.TeachersHandler)
+	mux.HandleFunc("PATCH /teachers/", handlers.TeachersHandler)
+	mux.HandleFunc("PATCH /teachers/{id}", handlers.TeachersHandler)
+	mux.HandleFunc("DELETE /teachers/", handlers.TeachersHandler)
+	mux.HandleFunc("DELETE /teachers/{id}", handlers.TeachersHandler)
+	
+	
+	mux.HandleFunc("/students/", handlers.StudentsHandler)
+	mux.HandleFunc("/execs/", handlers.ExecsHandler)
+	return mux
+}
+```
