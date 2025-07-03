@@ -515,3 +515,120 @@ func GetTeacherHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(teacher)
 }
 ```
+
+
+## Modifying Multiple Entries - PATCH
+
+A transaction means that we are going to run multiple SQL statementd one after another. 
+
+`db.Begin()` starts a transaction and the default isolation is dependent on the driver. But to simplify it starts a transaction and that's why it returns a transaction `sql.Tx` and an error. 
+
+In Go, when you need to execute a series of SQL statements that should eiter all succeed or all fail. In that case we can use transactions. The database sql package provides a way to handle transactions using db.Begin and then from the resulting transaction we can use tx.Exec to execute statements, tx.Rollback to rollback the execution and tx.Commit to finally commit the transaction.
+
+In the context of databases and SQl, a transaction is a sequence of one or more SQL operations that are executed as a single unit of work. The key characteristics of transaction is that, it ensures ACID properties. ACID stands for Atomicity, Consistency, Isolation and Durability for the operations within it. 
+
+- Atomicity means that all operations within the transaction must succeed, or none should happen at all. If any operation within the transaction failsm the entire transaction is rolled back and the database is left in it's original state.
+
+- Consistency means that a transaction, brings the database from one valid state to another. If a transaction is successful, the database will be in a consistent state according to all defined rules such as constraints, triggers, etc. 
+
+- Isolation means that the transactions are isolated from each other, meaning that the operation in one transaction are not visible to other transactions until the transaction is committed. This ensures that the transactions do not interfere with each other.
+
+- Duratbility means, once a transaction is committed, it's changes are permanennt, even in the event of a system failure, the data will persist and it will not be lost.
+
+`tx.Exec()` executes an SQL statement within the context of a transaction. It is similar to `db.Exec()` as it also returns a result and an error but it ensures that the operation is part of the transaction. `db.Exec()` is for individual statement, `tx.Exec` is part of a transaction and we can use this for insert, update or delete statements within a transaction.
+
+`tx.Rollback` just simply rolls back the transaction, undoing all the changes made during the transaction. This should be called if an error occurs, and that you want to discard any changes made in the transaction.
+
+`tx.Commit()` commits the transaction applying all the changes made during the transaction and this should be called when all operations within the transaction succeeded and that you want to make the changes permanent.
+
+Since we implemented transactions, transaction either finishes completely means either it is executed successfully completely or it fails completely. There's no partial success or partial failure when it comes to transactions.
+
+```go
+// PATCH /teachers/
+func PatchTeachersHandler(w http.ResponseWriter, r *http.Request) {
+	db, err := sqlconnect.ConnectDb()
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Unable to connect to databse", http.StatusInternalServerError)
+		return
+	}
+	defer db.Close()
+
+	var updates []map[string]interface{}
+	err = json.NewDecoder(r.Body).Decode(&updates)
+	if err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Error starting transaction", http.StatusInternalServerError)
+		return
+	}
+
+	for _, update := range updates {
+		id, ok := update["id"].(string)
+		if !ok {
+			tx.Rollback()
+			http.Error(w, "Invalid teacher ID in update", http.StatusBadRequest)
+			return
+		}
+
+		var teacherFromDb models.Teacher
+		err := db.QueryRow("SELECT id, first_name, last_name, email, class, subject FROM teachers WHERE id = ?", id).Scan(&teacherFromDb.ID, &teacherFromDb.FirstName, &teacherFromDb.LastName, &teacherFromDb.Email, &teacherFromDb.Class, &teacherFromDb.Subject)
+
+		if err != nil {
+			tx.Rollback()
+			if err == sql.ErrNoRows {
+				http.Error(w, "Teacher not found", http.StatusNotFound)
+				return
+			}
+			http.Error(w, "Error retrieving teacher", http.StatusInternalServerError)
+			return
+		}
+
+		// Applu updates using reflection
+		teacherVal := reflect.ValueOf(&teacherFromDb).Elem()
+		teacherType := teacherVal.Type()
+
+		for k, v := range update {
+			if k == "id" {
+				continue // skip updating the fields
+			}
+			for i := 0; i < teacherVal.NumField(); i++ {
+				field := teacherType.Field(i)
+				if field.Tag.Get("json") == k+",omitempty" {
+					fieldVal := teacherVal.Field(i)
+					if fieldVal.CanSet() {
+						val := reflect.ValueOf(v)
+						if val.Type().ConvertibleTo(fieldVal.Type()) {
+							fieldVal.Set(val.Convert(fieldVal.Type()))
+						} else {
+							tx.Rollback()
+							log.Printf("cannot convert %v to %v", val.Type(), fieldVal.Type())
+							return
+						}
+					}
+					break
+				}
+			}
+		}
+		_, err = tx.Exec("UPDATE teachers SET first_name = ?, last_name = ?, email = ?, class = ?, subject = ? WHERE id = ?", teacherFromDb.FirstName, teacherFromDb.LastName, teacherFromDb.Email, teacherFromDb.Class, teacherFromDb.Subject, teacherFromDb.ID)
+		if err != nil {
+			tx.Rollback()
+			http.Error(w, "Error updating teacher", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Commit the transaction
+	err = tx.Commit()
+	if err != nil {
+		http.Error(w, "Error comitting transaction", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+```
