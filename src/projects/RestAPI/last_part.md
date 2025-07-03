@@ -398,3 +398,120 @@ func Router() *http.ServeMux {
 	return mux
 }
 ```
+
+## Using Path Params for Specific Entry
+
+`router/router.go`
+```go
+package router
+
+import (
+	"net/http"
+	"school_management_api/internal/api/handlers"
+)
+
+func Router() *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", handlers.RootHandler)
+	
+	mux.HandleFunc("GET /teachers/", handlers.GetTeachersHandler)
+	mux.HandleFunc("POST /teachers/", handlers.AddTeacherHandler)
+	mux.HandleFunc("PATCH /teachers/", handlers.PatchTeachersHandler)
+	mux.HandleFunc("DELETE /teachers/", handlers.DeleteTeachersHandler)
+	
+	mux.HandleFunc("GET /teachers/{id}", handlers.GetTeacherHandler)
+	mux.HandleFunc("PUT /teachers/{id}", handlers.UpdateTeacherHandler)
+	mux.HandleFunc("PATCH /teachers/{id}", handlers.PatchTeachersHandler)
+	mux.HandleFunc("DELETE /teachers/{id}", handlers.DeleteTeachersHandler)
+	
+	
+	mux.HandleFunc("/students/", handlers.StudentsHandler)
+	mux.HandleFunc("/execs/", handlers.ExecsHandler)
+	return mux
+}
+```
+
+`handlers/teachers.go`
+```go
+
+func GetTeachersHandler(w http.ResponseWriter, r *http.Request) {
+
+	db, err := sqlconnect.ConnectDb()
+	if err != nil {
+		http.Error(w, "Error connecting to database", http.StatusInternalServerError)
+		return
+	}
+	defer db.Close()
+
+	query := "SELECT id, first_name, last_name, email, class, subject FROM teachers WHERE 1=1"
+	var args []interface{}
+
+	query, args = addFilters(r, query, args)
+
+	query = addSorting(r, query)
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		fmt.Println("err")
+		http.Error(w, "Database Query Error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	teacherList := make([]models.Teacher, 0)
+	for rows.Next() {
+		teacher := models.Teacher{}
+		err = rows.Scan(&teacher.ID, &teacher.FirstName, &teacher.LastName, &teacher.Email, &teacher.Class, &teacher.Subject)
+		if err != nil {
+			http.Error(w, "Error Scanning the database results", http.StatusInternalServerError)
+			return
+		}
+		teacherList = append(teacherList, teacher)
+	}
+
+	response := struct {
+		Status string           `json:"status"`
+		Count  int              `json:"count"`
+		Data   []models.Teacher `json:"data"`
+	}{
+		Status: "success",
+		Count:  len(teacherList),
+		Data:   teacherList,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+
+}
+
+func GetTeacherHandler(w http.ResponseWriter, r *http.Request) {
+
+	db, err := sqlconnect.ConnectDb()
+	if err != nil {
+		http.Error(w, "Error connecting to database", http.StatusInternalServerError)
+		return
+	}
+	defer db.Close()
+
+	idStr := r.PathValue("id")
+
+	// Handle Path parameter
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	var teacher models.Teacher
+	err = db.QueryRow("SELECT id, first_name, last_name, email, class, subject FROM teachers WHERE id = ?", id).Scan(&teacher.ID, &teacher.Class, &teacher.FirstName, &teacher.LastName, &teacher.Subject, &teacher.Email)
+	if err == sql.ErrNoRows {
+		http.Error(w, "Teacher not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		fmt.Println(err)
+		http.Error(w, "Database Query Error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(teacher)
+}
+```
