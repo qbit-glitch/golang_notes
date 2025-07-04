@@ -5,11 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	mw "school_management_api/internal/api/middlewares"
 	"school_management_api/internal/api/router"
 	"school_management_api/internal/repository/sqlconnect"
-	"school_management_api/pkg/utils"
-	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -34,25 +31,25 @@ func main() {
 		MinVersion: tls.VersionTLS12,
 	}
 
-	rl := mw.NewRateLimiter(5, time.Minute)
+	// rl := mw.NewRateLimiter(5, time.Minute)
 
-	hppOptions := mw.HPPOptions{
-		CheckQuery:                  true,
-		CheckBody:                   true,
-		CheckBodyOnlyForContentType: "application/x-www-form-urlencoded",
-		Whitelist:                   []string{"allowedParam"},
-	}
+	// hppOptions := mw.HPPOptions{
+	// 	CheckQuery:                  true,
+	// 	CheckBody:                   true,
+	// 	CheckBodyOnlyForContentType: "application/x-www-form-urlencoded",
+	// 	Whitelist:                   []string{"allowedParam"},
+	// }
 
 	mux := router.Router()
 	// secureMux := mw.Cors(rl.Middleware(mw.ResponseTimeMiddleware(mw.SecurityHeaders(mw.Compression(mw.Hpp(hppOptions)(mux))))))
-	secureMux := utils.ApplyMiddlewares(mux, mw.Hpp(hppOptions), mw.Compression, mw.SecurityHeaders, mw.ResponseTimeMiddleware, rl.Middleware, mw.Cors)
+	// secureMux := utils.ApplyMiddlewares(mux, mw.Hpp(hppOptions), mw.Compression, mw.SecurityHeaders, mw.ResponseTimeMiddleware, rl.Middleware, mw.Cors)
 
 	// create custom server
 	server := &http.Server{
-		Addr: port,
-		// Handler: mux
+		Addr:    port,
+		Handler: mux,
 		// Handler:   mw.SecurityHeaders(mux),
-		Handler:   secureMux,
+		// Handler:   secureMux,
 		TLSConfig: tlsConfig,
 	}
 

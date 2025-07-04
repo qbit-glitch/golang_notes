@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"school_management_api/internal/models"
@@ -53,8 +54,9 @@ func GetOneTeacherHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(teacher)
 }
 
-func AddTeacherHandler(w http.ResponseWriter, r *http.Request) {
+func AddTeachersHandler(w http.ResponseWriter, r *http.Request) {
 
+	fmt.Println("----------- AddTeachersHandler called --------")
 	var newTeachers []models.Teacher
 	err := json.NewDecoder(r.Body).Decode(&newTeachers)
 	if err != nil {

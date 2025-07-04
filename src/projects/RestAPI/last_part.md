@@ -2013,3 +2013,51 @@ func DeleteTeachersHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 ```
+
+
+## Struct Tags
+
+In our functions, we are preparing SQL statements manually. So DB tags are not directly utilized for database operations but for better readability and maintainability. Using DB tags can still be beneficial if you decide to use an ORM (Object Relational Mapping library) using the sqlx or gorm libraries.
+
+```go
+
+func generateInsertQuery(model interface{}) string {
+	modelType := reflect.TypeOf(model)
+	var columns, placeholders string
+
+	for i := 0; i < modelType.NumField(); i++ {
+
+		dbTag := modelType.Field(i).Tag.Get("db")
+		dbTag = strings.TrimSuffix(dbTag, ",omitempty")
+		fmt.Println("dbTag:", dbTag)
+
+		if dbTag != "" && dbTag != "id" { // skip the ID field if it's auto increment
+			if columns != "" {
+				columns += ", "
+				placeholders += ", "
+			}
+			columns += dbTag
+			placeholders += "?"
+		}
+	}
+	fmt.Printf("INSERT INTO teachers (%s) VALUES (%s)\n", columns, placeholders)
+	return fmt.Sprintf("INSERT INTO teachers (%s) VALUE (%s)", columns, placeholders)
+}
+
+func getStructValues(model interface{}) []interface{} {
+
+	modelValue := reflect.ValueOf(model)
+
+	modelType := modelValue.Type()
+	values := []interface{}{}
+
+	for i := 0; i < modelType.NumField(); i++ {
+		dbTag := modelType.Field(i).Tag.Get("db")
+		if dbTag != "" && dbTag != "id,omitempty" {
+			values = append(values, modelValue.Field(i).Interface())
+		}
+	}
+	log.Println("Values:", values)
+	return values
+}
+```
