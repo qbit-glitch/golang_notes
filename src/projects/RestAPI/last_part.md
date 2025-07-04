@@ -2061,3 +2061,154 @@ func getStructValues(model interface{}) []interface{} {
 	return values
 }
 ```
+
+
+## Data Validation
+
+Data validation is the process of ensuring that incoming data is accurate, complete and meets specific requirements before it is processed or stored. In the context of APIs, data validation is crucial for maintaining the integrity of your application and ensuring a good user experience.
+
+Importance :
+- Security
+- Data Integrity
+- User Experience
+
+Validating data helps protect against malicious inputs that could lead to vulnerabilities like SQL injection or cross-site scripting. Data validation also ensures that the data stored in your database is accurate and reliable. By providing meaningful error messages you guide users to submit the correct data enhancing their experience.
+
+Types of Data Validation
+- Format Validation
+- Presence Validation
+- Type Validation
+- Value Validation
+- Length Validation
+
+Best Practices
+- Validate Early
+- Provide Clear Error Messages
+- Use libraries and frameworks
+- Implement server-side validation
+- Be consistent
+
+Common Pitfalls :
+- Overly Restrictive Validation
+- Neglecting Security
+- Ignoring Data Types
+- Inadequate Testing
+
+
+When we are making servers, we are making a protection layer, a firewall, a line of defense for our database in a way. Moreover database operations are expensive as in time and resource consuming, so our server should prevent such cases from reaching the API. It needs to be the strongest line of defense against any illegal operation, against our database whether retrieval of data or posting of data. But other than our servers, there are other lines of defenses like middleware proxies, our front end and many more. Our main asset is the database and server is the strong titanium gate that needs to protect it.
+
+
+In Conclusion, data validatino is a critical aspect of building robust APIs. It not only enhances security and data integrity, but also improves user experience by guiding users towards the correct input format. By following best practices and avoiding pitfalls, you can create a solid foundation for your API project.
+
+`internal/api/handler/teachers.go`
+```go
+func AddTeachersHandler(w http.ResponseWriter, r *http.Request) {
+
+	var newTeachers []models.Teacher
+	var rawTeachers []map[string]interface{}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Error reading request Body", http.StatusInternalServerError)
+		return
+	}
+	defer r.Body.Close()
+
+	err = json.Unmarshal(body, &newTeachers)
+	if err != nil {
+		http.Error(w, "Invalid Request Body", http.StatusBadRequest)
+		return
+	}
+	fmt.Println(rawTeachers)
+
+	fields := GetFieldNames(models.Teacher{})
+
+	allowedFields := make(map[string]struct{})
+	for _, field := range fields {
+		allowedFields[field] = struct{}{}
+	}
+
+	for _, teacher := range rawTeachers {
+		for key := range teacher {
+			_, ok := allowedFields[key]
+			if !ok {
+				http.Error(w, "Unacceptable field found in request. Only use allowed fields.", http.StatusBadRequest)
+			}
+		}
+	}
+
+	err = json.Unmarshal(body, &rawTeachers)
+	if err != nil {
+		http.Error(w, "Invalid Request Body", http.StatusBadRequest)
+		fmt.Println("New Teachers:", newTeachers)
+		return
+	}
+
+	for _, teacher := range newTeachers {
+		err = CheckBlankFields(teacher)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+
+	addedTeachers, err := sqlconnect.AddTeachersDBHandler(newTeachers)
+	if err != nil {
+		// fmt.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+
+	response := struct {
+		Status string           `json:"status"`
+		Count  int              `json:"count"`
+		Data   []models.Teacher `json:"data"`
+	}{
+		Status: "success",
+		Count:  len(addedTeachers),
+		Data:   addedTeachers,
+	}
+
+	json.NewEncoder(w).Encode(response)
+}
+```
+
+
+`internal/api/handlers/helpers.go`
+```go
+package handlers
+
+import (
+	"errors"
+	"reflect"
+	"school_management_api/pkg/utils"
+	"strings"
+)
+
+func CheckBlankFields(value interface{}) error {
+	val := reflect.ValueOf(value)
+	for i := 0; i < val.NumField(); i++ {
+		field := val.Field(i)
+		if field.Kind() == reflect.String && field.String() == "" {
+			// http.Error(w, "All fields are required", http.StatusBadRequest)
+			return utils.ErrorHandler(errors.New("all fields are required"), "All fields are required")
+		}
+	}
+	return nil
+}
+
+func GetFieldNames(model interface{}) []string {
+	val := reflect.TypeOf(model)
+	fields := []string{}
+
+	for i := 0; i < val.NumField(); i++ {
+		field := val.Field(i)
+		fieldToAdd := strings.TrimSuffix(field.Tag.Get("json"), ",omitempty")
+		fields = append(fields, fieldToAdd)
+	}
+	return fields
+}
+```
