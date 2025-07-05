@@ -618,7 +618,7 @@ func DeleteStudents(ids []int) ([]int, error) {
 		log.Println(err)
 		return nil, utils.ErrorHandler(err, "error deleting data")
 	}
-
+  
 	if len(deleteIds) < 1 {
 		return nil, utils.ErrorHandler(err, "IDs do not exist")
 	}
@@ -632,4 +632,9 @@ Never use `nil` as a handler, otherwise you would always get an error and your s
 
 `router/router.go`
 ```go
+mux.HandleFunc("GET /teachers/{id}/students", handlers.GetTeachersHandler)
+mux.HandleFunc("GET /teachers/{id}/studentcount", handlers.GetTeachersHandler)
+```
+
+## Getting Student List for a specific teacher
 
