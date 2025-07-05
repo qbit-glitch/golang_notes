@@ -632,8 +632,8 @@ Never use `nil` as a handler, otherwise you would always get an error and your s
 
 `router/router.go`
 ```go
-mux.HandleFunc("GET /teachers/{id}/students", handlers.GetTeachersHandler)
-mux.HandleFunc("GET /teachers/{id}/studentcount", handlers.GetTeachersHandler)
+mux.HandleFunc("GET /teachers/{id}/students", handlers.GetStudentsByTeacherId)
+mux.HandleFunc("GET /teachers/{id}/studentcount", handlers.GetStudentCountByTeacherId)
 ```
 
 ## Getting Student List for a specific teacher
@@ -697,5 +697,53 @@ func GetStudentsByTeacherIdFromDb(teacherId string, students []models.Student) (
 		return nil, utils.ErrorHandler(err, "error retrieving data")
 	}
 	return students, nil
+}
+```
+
+## Getting Student Count for a specific teacher
+
+Well, the student list can be a lot longer than we think, and it may take time to be generated and sometimes it may be possible that the client only needs the count and not the list. That's why a separate handler for counting the students.
+
+`teachers.go`
+```go
+func GetStudentCountByTeacherId(w http.ResponseWriter, r *http.Request) {
+	teacherId := r.PathValue("id")
+	var studentCount int
+
+	studentCount, err := sqlconnect.GetStudentCountByTeacherIdFromDb(teacherId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	response := struct {
+		Status string `json:"status"`
+		Count  int    `json:"count"`
+	}{
+		Status: "success",
+		Count:  studentCount,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+```
+
+
+`teachers_crud.go`
+```go
+func GetStudentCountByTeacherIdFromDb(teacherId string) (int, error) {
+	db, err := ConnectDb()
+	if err != nil {
+		return 0, utils.ErrorHandler(err, "error retrieving data")
+	}
+	defer db.Close()
+
+	query := `SELECT COUNT(*) FROM students WHERE class = (SELECT class FROM teachers WHERE id = ?)`
+	var studentCount int
+	err = db.QueryRow(query, teacherId).Scan(&studentCount)
+	if err != nil {
+		return 0, utils.ErrorHandler(err, "error retrieving data")
+	}
+	return studentCount, nil
 }
 ```
