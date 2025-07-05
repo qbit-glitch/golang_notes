@@ -40,7 +40,7 @@ func main() {
 	// 	Whitelist:                   []string{"allowedParam"},
 	// }
 
-	mux := router.Router()
+	mux := router.MainRouter()
 	// secureMux := mw.Cors(rl.Middleware(mw.ResponseTimeMiddleware(mw.SecurityHeaders(mw.Compression(mw.Hpp(hppOptions)(mux))))))
 	// secureMux := utils.ApplyMiddlewares(mux, mw.Hpp(hppOptions), mw.Compression, mw.SecurityHeaders, mw.ResponseTimeMiddleware, rl.Middleware, mw.Cors)
 
