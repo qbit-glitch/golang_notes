@@ -30,6 +30,7 @@ func GetTeachersHandler(w http.ResponseWriter, r *http.Request) {
 		Count:  len(teachers),
 		Data:   teachers,
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 
@@ -38,21 +39,21 @@ func GetTeachersHandler(w http.ResponseWriter, r *http.Request) {
 func GetOneTeacherHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 
-	// Handle Path parameter
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		// fmt.Println(err)
-		http.Error(w, "invalid ID", http.StatusBadRequest)
+		http.Error(w, "Invalid Id", http.StatusBadRequest)
+		fmt.Println(err)
 		return
 	}
 	teacher, err := sqlconnect.GetTeacherByID(id)
 	if err != nil {
-		// fmt.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(teacher)
+
 }
 
 func AddTeachersHandler(w http.ResponseWriter, r *http.Request) {
@@ -62,18 +63,18 @@ func AddTeachersHandler(w http.ResponseWriter, r *http.Request) {
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "Error reading request Body", http.StatusInternalServerError)
+		http.Error(w, "Error reading request body", http.StatusInternalServerError)
 		return
 	}
 	defer r.Body.Close()
 
-	err = json.Unmarshal(body, &newTeachers)
+	err = json.Unmarshal(body, &rawTeachers)
 	if err != nil {
 		http.Error(w, "Invalid Request Body", http.StatusBadRequest)
 		return
 	}
-	fmt.Println(rawTeachers)
 
+	// Get JSON tag
 	fields := GetFieldNames(models.Teacher{})
 
 	allowedFields := make(map[string]struct{})
@@ -86,19 +87,20 @@ func AddTeachersHandler(w http.ResponseWriter, r *http.Request) {
 			_, ok := allowedFields[key]
 			if !ok {
 				http.Error(w, "Unacceptable field found in request. Only use allowed fields.", http.StatusBadRequest)
+				return
 			}
+
 		}
 	}
 
-	err = json.Unmarshal(body, &rawTeachers)
+	err = json.Unmarshal(body, &newTeachers)
 	if err != nil {
 		http.Error(w, "Invalid Request Body", http.StatusBadRequest)
-		fmt.Println("New Teachers:", newTeachers)
 		return
 	}
 
 	for _, teacher := range newTeachers {
-		err = CheckBlankFields(teacher)
+		err := CheckBlankFields(teacher)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -107,14 +109,12 @@ func AddTeachersHandler(w http.ResponseWriter, r *http.Request) {
 
 	addedTeachers, err := sqlconnect.AddTeachersDBHandler(newTeachers)
 	if err != nil {
-		// fmt.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-
 	response := struct {
 		Status string           `json:"status"`
 		Count  int              `json:"count"`
@@ -124,8 +124,8 @@ func AddTeachersHandler(w http.ResponseWriter, r *http.Request) {
 		Count:  len(addedTeachers),
 		Data:   addedTeachers,
 	}
-
 	json.NewEncoder(w).Encode(response)
+
 }
 
 func UpdateTeacherHandler(w http.ResponseWriter, r *http.Request) {
@@ -133,7 +133,7 @@ func UpdateTeacherHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		log.Println(err)
-		http.Error(w, "Invalid Teacher ID", http.StatusBadRequest)
+		http.Error(w, "Invalid Teacher Id", http.StatusBadRequest)
 		return
 	}
 
@@ -145,16 +145,14 @@ func UpdateTeacherHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedTeacherFromDb, err := sqlconnect.UpdateTeacher(id, updatedTeacher)
+	updatedTeacherFromDB, err := sqlconnect.UpdateTeacher(id, updatedTeacher)
 	if err != nil {
-		// log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(updatedTeacherFromDb)
-
+	json.NewEncoder(w).Encode(updatedTeacherFromDB)
 }
 
 // PATCH /teachers/
@@ -170,7 +168,7 @@ func PatchTeachersHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = sqlconnect.PatchTeachers(updates)
 	if err != nil {
-		// log.Println(err)
+		log.Println(err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -183,7 +181,7 @@ func PatchOneTeacherHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		log.Println(err)
-		http.Error(w, "Invalid Teacher ID", http.StatusBadRequest)
+		http.Error(w, "Invalid Teacher Id", http.StatusBadRequest)
 		return
 	}
 
@@ -195,9 +193,9 @@ func PatchOneTeacherHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Apply updates using reflect
 	updatedTeacher, err := sqlconnect.PatchOneTeacher(id, updates)
 	if err != nil {
-		// log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -212,71 +210,42 @@ func DeleteOneTeacherHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		log.Println(err)
-		http.Error(w, "Invalid Teacher ID", http.StatusBadRequest)
+		http.Error(w, "Invalid Teacher Id", http.StatusBadRequest)
 		return
 	}
 
 	err = sqlconnect.DeleteOneTeacher(id)
 	if err != nil {
-		// log.Println(err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Response Body -> Optional
+	// --- Alternate approach
+	// w.WriteHeader(http.StatusNoContent)
+
+	// Response Body
 	w.Header().Set("Content-Type", "application/json")
 	response := struct {
 		Status string `json:"status"`
 		ID     int    `json:"id"`
 	}{
-		Status: "Teacher deleted successfully",
+		Status: "Teacher successfully deleted",
 		ID:     id,
 	}
 	json.NewEncoder(w).Encode(response)
 
-	// Return status of NoContent -> Compulsory
-	w.WriteHeader(http.StatusNoContent)
-
 }
-
-// After using Go's latest features, we don't need this, we can directly use the get, put, post, delete teachers handler.
-
-// func TeachersHandler(w http.ResponseWriter, r *http.Request) {
-// 	// Find out what kind of http method that is sent with the request
-// 	fmt.Println(r.Method)
-
-// 	switch r.Method {
-// 	case http.MethodGet:
-// 		getTeachersHandler(w, r)
-
-// 	case http.MethodPost:
-// 		addTeacherHandler(w, r)
-
-// 	case http.MethodPut:
-// 		updateTeacherHandler(w, r)
-
-// 	case http.MethodPatch:
-// 		patchTeachersHandler(w, r)
-
-// 	case http.MethodDelete:
-// 		deleteTeachersHandler(w, r)
-// 	}
-
-// 	w.Write([]byte("Hello Teachers Route"))
-// 	fmt.Println("Hello Teachers Route")
-// }
 
 func DeleteTeachersHandler(w http.ResponseWriter, r *http.Request) {
 
 	var ids []int
 	err := json.NewDecoder(r.Body).Decode(&ids)
 	if err != nil {
-		log.Println(err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 
-	deleteIds, err := sqlconnect.DeleteTeachers(ids)
+	deletedIds, err := sqlconnect.DeleteTeachers(ids)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -288,7 +257,8 @@ func DeleteTeachersHandler(w http.ResponseWriter, r *http.Request) {
 		DeletedIDs []int  `json:"deleted_ids"`
 	}{
 		Status:     "Teachers successfully deleted",
-		DeletedIDs: deleteIds,
+		DeletedIDs: deletedIds,
 	}
 	json.NewEncoder(w).Encode(response)
+
 }

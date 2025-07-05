@@ -9,6 +9,7 @@ import (
 	"school_management_api/internal/models"
 	"school_management_api/pkg/utils"
 	"strconv"
+	"strings"
 )
 
 func GetStudentsDbHandler(students []models.Student, r *http.Request) ([]models.Student, error) {
@@ -18,7 +19,7 @@ func GetStudentsDbHandler(students []models.Student, r *http.Request) ([]models.
 	}
 	defer db.Close()
 
-	query := "SELECT id, first_name, last_name, email, class FROM teachers WHERE 1=1"
+	query := "SELECT id, first_name, last_name, email, class FROM students WHERE 1=1"
 	var args []interface{}
 
 	query, args = utils.AddFilters(r, query, args)
@@ -87,7 +88,10 @@ func AddStudentsDBHandler(newStudents []models.Student) ([]models.Student, error
 		res, err := stmt.Exec(values...)
 
 		if err != nil {
-
+			fmt.Println("----- Error():", err)
+			if strings.Contains(err.Error(), "a foreign key constraint fails (`school`.`students`, CONSTRAINT `students_ibfk_1` FOREIGN KEY (`class`) REFERENCES `teachers` (`class`))"){
+				return nil, utils.ErrorHandler(err, "class / class teacher does not exist.")
+			}
 			return nil, utils.ErrorHandler(err, "error adding data")
 		}
 		lastID, err := res.LastInsertId()

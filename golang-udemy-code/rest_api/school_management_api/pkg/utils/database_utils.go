@@ -55,8 +55,8 @@ func isValidField(field string) bool {
 	validFields := map[string]bool{
 		"first_name": true,
 		"last_name":  true,
-		"class":      true,
 		"email":      true,
+		"class":      true,
 		"subject":    true,
 	}
 	return validFields[field]
