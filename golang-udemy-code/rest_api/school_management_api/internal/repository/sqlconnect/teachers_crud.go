@@ -9,65 +9,7 @@ import (
 	"school_management_api/internal/models"
 	"school_management_api/pkg/utils"
 	"strconv"
-	"strings"
 )
-
-func isValidOrder(order string) bool {
-	return order == "asc" || order == "desc"
-}
-
-func isValidField(field string) bool {
-	validFields := map[string]bool{
-		"first_name": true,
-		"last_name":  true,
-		"class":      true,
-		"email":      true,
-		"subject":    true,
-	}
-	return validFields[field]
-}
-
-func addSorting(r *http.Request, query string) string {
-	sortParams := r.URL.Query()["sortby"]
-	if len(sortParams) > 0 {
-		query += " ORDER BY"
-		for i, param := range sortParams {
-			parts := strings.Split(param, ":")
-			if len(parts) != 2 {
-				continue
-			}
-			field, order := parts[0], parts[1]
-
-			if !isValidField(field) || !isValidOrder(order) {
-				continue
-			}
-			if i > 0 {
-				query += ","
-			}
-			query += " " + field + " " + order
-		}
-	}
-	return query
-}
-
-func addFilters(r *http.Request, query string, args []interface{}) (string, []interface{}) {
-	params := map[string]string{
-		"first_name": "first_name",
-		"last_name":  "last_name",
-		"email":      "email",
-		"class":      "class",
-		"subject":    "subject",
-	}
-
-	for param, dbField := range params {
-		value := r.URL.Query().Get(param)
-		if value != "" {
-			query += " AND " + dbField + " = ?"
-			args = append(args, value)
-		}
-	}
-	return query, args
-}
 
 func GetTeachersDbHandler(teachers []models.Teacher, r *http.Request) ([]models.Teacher, error) {
 	db, err := ConnectDb()
@@ -80,9 +22,9 @@ func GetTeachersDbHandler(teachers []models.Teacher, r *http.Request) ([]models.
 	query := "SELECT id, first_name, last_name, email, class, subject FROM teachers WHERE 1=1"
 	var args []interface{}
 
-	query, args = addFilters(r, query, args)
+	query, args = utils.AddFilters(r, query, args)
 
-	query = addSorting(r, query)
+	query = utils.AddSorting(r, query)
 
 	rows, err := db.Query(query, args...)
 	if err != nil {
@@ -137,7 +79,7 @@ func AddTeachersDBHandler(newTeachers []models.Teacher) ([]models.Teacher, error
 	}
 	defer db.Close()
 	// stmt, err := db.Prepare("INSERT INTO teachers (first_name, last_name, email, class, subject) VALUES (?,?,?,?,?)")
-	stmt, err := db.Prepare(generateInsertQuery(models.Teacher{}))
+	stmt, err := db.Prepare(utils.GenerateInsertQuery("teachers", models.Teacher{}))
 	if err != nil {
 		// http.Error(w, "Error in preparing SQL query", http.StatusInternalServerError)
 		return nil, utils.ErrorHandler(err, "error adding data")
@@ -151,7 +93,7 @@ func AddTeachersDBHandler(newTeachers []models.Teacher) ([]models.Teacher, error
 
 	for i, newTeacher := range newTeachers {
 		// res, err := stmt.Exec(newTeacher.FirstName, newTeacher.LastName, newTeacher.Email, newTeacher.Class, newTeacher.Subject)
-		values := getStructValues(newTeacher)
+		values := utils.GetStructValues(newTeacher)
 		fmt.Println(newTeacher)
 
 		fmt.Println("VALUES:", values)
@@ -170,46 +112,6 @@ func AddTeachersDBHandler(newTeachers []models.Teacher) ([]models.Teacher, error
 		addedTeachers[i] = newTeacher
 	}
 	return addedTeachers, nil
-}
-
-func generateInsertQuery(model interface{}) string {
-	modelType := reflect.TypeOf(model)
-	var columns, placeholders string
-
-	for i := 0; i < modelType.NumField(); i++ {
-
-		dbTag := modelType.Field(i).Tag.Get("db")
-		dbTag = strings.TrimSuffix(dbTag, ",omitempty")
-		fmt.Println("dbTag:", dbTag)
-
-		if dbTag != "" && dbTag != "id" { // skip the ID field if it's auto increment
-			if columns != "" {
-				columns += ", "
-				placeholders += ", "
-			}
-			columns += dbTag
-			placeholders += "?"
-		}
-	}
-	fmt.Printf("INSERT INTO teachers (%s) VALUES (%s)\n", columns, placeholders)
-	return fmt.Sprintf("INSERT INTO teachers (%s) VALUE (%s)", columns, placeholders)
-}
-
-func getStructValues(model interface{}) []interface{} {
-
-	modelValue := reflect.ValueOf(model)
-
-	modelType := modelValue.Type()
-	values := []interface{}{}
-
-	for i := 0; i < modelType.NumField(); i++ {
-		dbTag := modelType.Field(i).Tag.Get("db")
-		if dbTag != "" && dbTag != "id,omitempty" {
-			values = append(values, modelValue.Field(i).Interface())
-		}
-	}
-	log.Println("Values:", values)
-	return values
 }
 
 func UpdateTeacher(id int, updatedTeacher models.Teacher) (models.Teacher, error) {

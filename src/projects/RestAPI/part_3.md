@@ -1,4 +1,4 @@
-# Part - {Last}
+# Part - 3
 
 ## Why `WHERE 1=1` in the SQL query
 

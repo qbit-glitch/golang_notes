@@ -62,7 +62,7 @@
 
     - [Creating our SQL Database](./projects/RestAPI/create_db_script.md)
 
-    - [Part: Last](./projects/RestAPI/last_part.md)
+    - [Part: 3](./projects/RestAPI/part_3.md)
 
 
 # Informative Lecture Notes
