@@ -9,8 +9,6 @@ func teachersRouter() *http.ServeMux {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /", handlers.RootHandler)
-
 	mux.HandleFunc("GET /teachers", handlers.GetTeachersHandler)
 	mux.HandleFunc("POST /teachers", handlers.AddTeachersHandler)
 	mux.HandleFunc("PATCH /teachers", handlers.PatchTeachersHandler)
