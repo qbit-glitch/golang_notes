@@ -1391,10 +1391,10 @@ func DeleteOneExec(id int) error {
 
 `internal/models/exec.go`
 ```go
-package models
-
-import "database/sql"
-
+#package models
+#
+#import "database/sql"
+#
 type Exec struct {
 	ID                  int            `json:"id,omitempty" db:"id,omitempty"`
 	FirstName           string         `json:"first_name,omitempty" db:"first_name,omitempty"`
@@ -1512,4 +1512,52 @@ Authorization is the process of determining what actions an authenticated user i
 
 When implementing authorization and authentication, it's essential to use strong and secure methods for verifying identity. Ensure that permissions are lightly controlled and regularly reviewed. Apply the principle of least privilege, granting only the necessary permission requried. And regularly audit and update both authentication and authorization mechanisms to maintain security.
 
+## Cookies, Sessions and JWT
 
+**Cookies**
+Cookies are basically key-value pairs. Cookies are small pieces of data that are stored on the client side usually within the user's web browser and they are sent back to the server with each http request. They are used to remember information about the user between requests. Cookies are primarily used for session management, personalization and tracking user behavior.
+
+When a server wants to set a cookie, it sends a set-cookie header in the http response. In client to server, the browser automatically includes the cookie int the cookie header of the subsequent http requests to the same domain. Let's say when you login to a website, the server might create a session and store the sessionID in a cookie. On each subsequent request, the browser sends the cookie back to the server, allowing the server to recognize the user and maintain the login state.
+
+- Carried between :
+	- From Server to Client
+	- From Client to Server
+
+- Typical Information they carry
+	- SessionID
+	- User Preferences
+	- Tracking Information
+
+- Usage in API/Server
+	- Session Management
+	- Authentication
+	- Personalization
+
+**Sessions**
+A session is a server side storage of user data that persists accross multiple requests from the same user. The session data is linked to a unique session ID, which is usually stored in a cookie on the client side. Sessions are used to store user specific data between requests, such as login status, user preferences and other stateful information like the items stored in user's cart.
+
+From client to server, the client sends the session ID stored in a cookie with each request. And from server to client, the server sends the session ID in a cookies when the session is first created. The most common example is shopping cart data for e-commerce applications. Sessions can also store authentication data to keep users logged in. And sessions can also store temporary data like form inputs or shopping cart items.
+
+- Carried between
+	- From Server to CLient
+	- From Client to Server
+
+- Typical Information they carry
+	- User Authentication Data
+	- User Preferences
+	- Shopping Cart Data
+
+- Usage in API/Server
+	- Authentication
+	- Stateful Applications
+
+For storing sessionId, we have to use Reddis an in-memory database.
+
+**JWT**
+The REST Principles advice us not to store session data, but our API RESTful, that means it should be stateless. We should not maintain the state in our API and preserve our resources.
+
+JWT (JSON Web Tokens) are a compact, URL safe token format for securely transmitting information between parties. It consists of three parts: a header, a payload and a signature and is often used for authentication and information exchange. JWTs are used to authenticate users, especially in stateless distributed systems. They can also carry user information and claims.
+
+From server to client, the server generates a JWT token and then sends it to the client, ususally in the response body or a cookie. Now from client to server, the client includes the JWT in the authorization header, commonly using the bearer schema of each request. The typical information that a JWT carries is userID to identify the user claims such as user roles, permissions and other metadata and expiration time to specify the token's validity period.
+
+Let's suppose that we logged in to an application successfully. The server generates a JWT containing user information and signs it. The server has to sign the JWT. The client then stores the JWT, usually in local storage or a cookie and includes it in authorization header of subsequent requests. The server then verifies the JWT signature and extracts the user information to authenticate and authorize the request.
