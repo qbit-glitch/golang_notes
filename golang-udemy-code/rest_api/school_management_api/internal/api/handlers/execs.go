@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"crypto/subtle"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -11,6 +14,9 @@ import (
 	"school_management_api/internal/repository/sqlconnect"
 	"school_management_api/pkg/utils"
 	"strconv"
+	"strings"
+
+	"golang.org/x/crypto/argon2"
 )
 
 func GetExecsHandler(w http.ResponseWriter, r *http.Request) {
@@ -248,9 +254,53 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "database query error", http.StatusBadRequest)
 		return
 	}
+
 	// is user active
+	if user.InactiveStatus {
+		http.Error(w, "Account is inactive", http.StatusForbidden)
+		return
+	}
 
 	// Verify password
+	parts := strings.Split(user.Password, ".")
+	if len(parts) != 2 {
+		utils.ErrorHandler(errors.New("invalid encoded hash format"), "invalid encoded hash format")
+		http.Error(w, "invalid encoded hash format", http.StatusForbidden)
+		return
+	}
+
+	saltBase64 := parts[0]
+	hashedPasswordBase64 := parts[1]
+
+	salt, err := base64.StdEncoding.DecodeString(saltBase64)
+	if err != nil {
+		utils.ErrorHandler(err, "failed to decode the salt")
+		http.Error(w, "failed to decode the salt", http.StatusForbidden)
+		return
+	}
+	
+	hashedPassword, err := base64.StdEncoding.DecodeString(hashedPasswordBase64)
+	if err != nil {
+		utils.ErrorHandler(err, "failed to decode the hashed password")
+		http.Error(w, "failed to decode the hased password", http.StatusForbidden)
+		return
+	}
+
+	hash := argon2.IDKey([]byte(req.Password), salt, 1, 64 * 1024, 4, 32)
+
+	if len(hash) != len(hashedPassword) {
+		utils.ErrorHandler(errors.New("incorrect password"), "incorrect password")
+		http.Error(w, "incorrect password", http.StatusForbidden)
+		return
+	}
+
+	if subtle.ConstantTimeCompare(hash, hashedPassword) == 1 {
+		// do nothing
+	} else {
+		utils.ErrorHandler(errors.New("incorrect password"), "incorrect password")
+		http.Error(w, "incorrect password", http.StatusForbidden)
+		return
+	}
 
 	// Generate Token
 

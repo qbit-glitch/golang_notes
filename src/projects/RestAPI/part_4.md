@@ -1612,3 +1612,96 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	// Send token as a response or as a cookie
 }
 ```
+
+## Login Route - Part 2 : Password Hashing
+
+```go
+func LoginHandler(w http.ResponseWriter, r *http.Request) {
+#	var req models.Exec
+
+	// Data Validation
+#	err := json.NewDecoder(r.Body).Decode(&req)
+#	if err != nil {
+#		http.Error(w, "Invalid request body", http.StatusBadRequest)
+#		return
+#	}
+#	defer r.Body.Close()
+#
+#	if req.Username == "" || req.Password == "" {
+#		http.Error(w, "Username and password are required", http.StatusBadRequest)
+#		return
+#	}
+#
+	// Search for user if user actually exists
+#	db, err := sqlconnect.ConnectDb()
+#	if err != nil {
+#		utils.ErrorHandler(err, "error updating data")
+#		http.Error(w, "error connecting to database", http.StatusBadRequest)
+#		return
+#	}
+#	defer db.Close()
+#
+#	user := &models.Exec{}
+#	err = db.QueryRow("SELECT id, first_name, last_name, email, username, password, inactive_status, role FROM execs WHERE username = ?", req.Username).Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Username, &user.Password, &user.InactiveStatus, &user.Role)
+#	if err != nil {
+#		if err == sql.ErrNoRows {
+#			utils.ErrorHandler(err, "user not found")
+#			http.Error(w, "user not found", http.StatusBadRequest)
+#			return
+#		}
+#		http.Error(w, "database query error", http.StatusBadRequest)
+#		return
+#	}
+#
+	// is user active
+	if user.InactiveStatus {
+		http.Error(w, "Account is inactive", http.StatusForbidden)
+		return
+	}
+
+	// Verify password
+	parts := strings.Split(user.Password, ".")
+	if len(parts) != 2 {
+		utils.ErrorHandler(errors.New("invalid encoded hash format"), "invalid encoded hash format")
+		http.Error(w, "invalid encoded hash format", http.StatusForbidden)
+		return
+	}
+
+	saltBase64 := parts[0]
+	hashedPasswordBase64 := parts[1]
+
+	salt, err := base64.StdEncoding.DecodeString(saltBase64)
+	if err != nil {
+		utils.ErrorHandler(err, "failed to decode the salt")
+		http.Error(w, "failed to decode the salt", http.StatusForbidden)
+		return
+	}
+	
+	hashedPassword, err := base64.StdEncoding.DecodeString(hashedPasswordBase64)
+	if err != nil {
+		utils.ErrorHandler(err, "failed to decode the hashed password")
+		http.Error(w, "failed to decode the hased password", http.StatusForbidden)
+		return
+	}
+
+	hash := argon2.IDKey([]byte(req.Password), salt, 1, 64 * 1024, 4, 32)
+
+	if len(hash) != len(hashedPassword) {
+		utils.ErrorHandler(errors.New("incorrect password"), "incorrect password")
+		http.Error(w, "incorrect password", http.StatusForbidden)
+		return
+	}
+
+	if subtle.ConstantTimeCompare(hash, hashedPassword) == 1 {
+		// do nothing
+	} else {
+		utils.ErrorHandler(errors.New("incorrect password"), "incorrect password")
+		http.Error(w, "incorrect password", http.StatusForbidden)
+		return
+	}
+
+	// Generate Token
+
+	// Send token as a response or as a cookie
+}
+```
