@@ -51,7 +51,7 @@ func GetExecByID(id int) (models.Exec, error) {
 	defer db.Close()
 
 	var exec models.Exec
-	err = db.QueryRow("SELECT id, first_name, last_name, email, class FROM execs WHERE id = ?", id).Scan(&exec.ID, &exec.FirstName, &exec.LastName, &exec.Email)
+	err = db.QueryRow("SELECT id, first_name, last_name, email, username, inactive_status, role  FROM execs WHERE id = ?", id).Scan(&exec.ID, &exec.FirstName, &exec.LastName, &exec.Email, &exec.Username, &exec.InactiveStatus, &exec.Role)
 	if err == sql.ErrNoRows {
 		return models.Exec{}, utils.ErrorHandler(err, "error retrieving data ")
 	} else if err != nil {
@@ -100,31 +100,6 @@ func AddExecsDBHandler(newExecs []models.Exec) ([]models.Exec, error) {
 	return addedExecs, nil
 }
 
-func UpdateExec(id int, updatedExec models.Exec) (models.Exec, error) {
-	db, err := ConnectDb()
-	if err != nil {
-		return models.Exec{}, utils.ErrorHandler(err, "error updating data")
-	}
-	defer db.Close()
-
-	var existingExec models.Exec
-	err = db.QueryRow("SELECT id, class, email, first_name, last_name FROM execs WHERE id = ?", id).Scan(&existingExec.ID, &existingExec.Email, &existingExec.FirstName, &existingExec.LastName)
-	if err != nil {
-		if err != sql.ErrNoRows {
-
-			return models.Exec{}, utils.ErrorHandler(err, "error updating data")
-		}
-		return models.Exec{}, utils.ErrorHandler(err, "error updating data")
-	}
-
-	updatedExec.ID = existingExec.ID
-	_, err = db.Exec("UPDATE execs SET first_name = ?, last_name = ?, email = ?, class = ? WHERE id = ?", updatedExec.FirstName, updatedExec.LastName, updatedExec.Email, updatedExec.ID)
-	if err != nil {
-		return models.Exec{}, utils.ErrorHandler(err, "error updating data")
-	}
-	return updatedExec, nil
-}
-
 func PatchExecs(updates []map[string]interface{}) error {
 	db, err := ConnectDb()
 	if err != nil {
@@ -138,6 +113,7 @@ func PatchExecs(updates []map[string]interface{}) error {
 
 	for _, update := range updates {
 		idStr, ok := update["id"].(string)
+		fmt.Println("ID:", idStr)
 		if !ok {
 			tx.Rollback()
 
@@ -145,13 +121,14 @@ func PatchExecs(updates []map[string]interface{}) error {
 		}
 
 		id, err := strconv.Atoi(idStr)
+		fmt.Println("ID:", id)
 		if err != nil {
 			tx.Rollback()
 			return utils.ErrorHandler(err, "invalid id")
 		}
 
 		var execFromDb models.Exec
-		err = db.QueryRow("SELECT id, first_name, last_name, email, class FROM execs WHERE id = ?", id).Scan(&execFromDb.ID, &execFromDb.FirstName, &execFromDb.LastName, &execFromDb.Email)
+		err = db.QueryRow("SELECT id, first_name, last_name, email, username FROM execs WHERE id = ?", id).Scan(&execFromDb.ID, &execFromDb.FirstName, &execFromDb.LastName, &execFromDb.Email, &execFromDb.Username)
 
 		if err != nil {
 			tx.Rollback()
@@ -188,7 +165,7 @@ func PatchExecs(updates []map[string]interface{}) error {
 				}
 			}
 		}
-		_, err = tx.Exec("UPDATE execs SET first_name = ?, last_name = ?, email = ?, class = ? WHERE id = ?", execFromDb.FirstName, execFromDb.LastName, execFromDb.Email, execFromDb.ID)
+		_, err = tx.Exec("UPDATE execs SET first_name = ?, last_name = ?, email = ?, username = ? WHERE id = ?", execFromDb.FirstName, execFromDb.LastName, execFromDb.Email, execFromDb.Username, execFromDb.ID)
 		if err != nil {
 			tx.Rollback()
 
@@ -212,7 +189,7 @@ func PatchOneExec(id int, updates map[string]interface{}) (models.Exec, error) {
 	defer db.Close()
 
 	var existingExec models.Exec
-	err = db.QueryRow("SELECT id, class, email, first_name, last_name FROM execs WHERE id = ?", id).Scan(&existingExec.ID, &existingExec.Email, &existingExec.FirstName, &existingExec.LastName)
+	err = db.QueryRow("SELECT id, first_name, last_name, email, username  FROM execs WHERE id = ?", id).Scan(&existingExec.ID, &existingExec.FirstName, &existingExec.LastName, &existingExec.Email, &existingExec.Username)
 	if err != nil {
 		if err != sql.ErrNoRows {
 
@@ -236,7 +213,7 @@ func PatchOneExec(id int, updates map[string]interface{}) (models.Exec, error) {
 		}
 	}
 
-	_, err = db.Exec("UPDATE execs SET first_name = ?, last_name = ?, email = ?, class = ? WHERE id = ?", existingExec.FirstName, existingExec.LastName, existingExec.Email, existingExec.ID)
+	_, err = db.Exec("UPDATE execs SET first_name = ?, last_name = ?, email = ?, username = ? WHERE id = ?", existingExec.FirstName, existingExec.LastName, existingExec.Email, existingExec.Username, existingExec.ID)
 	if err != nil {
 		return models.Exec{}, utils.ErrorHandler(err, "error updating data")
 	}
@@ -251,7 +228,7 @@ func DeleteOneExec(id int) error {
 	}
 	defer db.Close()
 
-	result, err := db.Exec("DELETE FROM exec WHERE id = ?", id)
+	result, err := db.Exec("DELETE FROM execs WHERE id = ?", id)
 	if err != nil {
 		return utils.ErrorHandler(err, "error deleting data")
 	}
