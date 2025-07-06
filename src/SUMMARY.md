@@ -57,6 +57,7 @@
     - [Creating our SQL Database](./projects/RestAPI/create_db_script.md)
 
     - [Part: 3](./projects/RestAPI/part_3.md)
+    - [Part: 4](./projects/RestAPI/part_4.md)
 
 
 # Informative Lecture Notes

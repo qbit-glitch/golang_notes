@@ -1411,3 +1411,87 @@ type Exec struct {
 }
 ```
 
+## Passwords - Hashing
+
+We are not making an API for our software that is publicly available, like instagram or facebook or something like that where anyone can register and login. This is an enterprise software where the user administrators will create a new user. There's no signing up for a new user. The new users are created by the adminitrators. So once an employee joins the executive staff, then that employee will be added to the database and a user will be created for that executive.
+
+When it comes to hashing passwords for secure storage, the choice of hashing algorithms is critical for ensuring both security and efficiency. The three commonly recommended algorithms are Bcrypt, Argon2 and Pbkdf2.
+
+- bcrypt
+	- Well established, secure
+	- It incorporates a salt to protect against rainbow table attacks and is adaptive, meaning the iteration count can be increased over time to make it slower as computing power increases.
+	- Popular
+
+- Argon2
+	- Winner of the Password Hashing Competition
+	- Three variants: Argon2d, Argon2i and Argon2id
+	- Highly efficient
+	- Argon2id is recommended for most use-cases as it provides a balance of resistance against both side channel and GPU attacks.
+	- In terms of efficiency, Argon2 is highly efficient and allows for fine-tuning of memory usafe, time, cost and parallelism, making it suitable for a wide range of environments.
+
+- PBKDF2 (Password Based Key Derivation Function 2)
+	- NIST-approved key derivation function
+	- can be slower compared to bcrypt and Argon2 specially when configured with high iteration count for better security.
+	- It applies a pseudo random function such as HMAC to the input password along with a salt value and repeats the process many times to produce a derived key. It is considered secure but less resistant to certain types of attacks like side channel attacks.
+
+For our API, we will use Argon2. package: `argon2` (golang.org/x/crypto/argon2)
+```bash
+go get golang.org/x/crypto/argon2
+```
+
+
+`repository/sqlconnect/execs_crud.go`
+```go
+func AddExecsDBHandler(newExecs []models.Exec) ([]models.Exec, error) {
+#	fmt.Println("------ AddExecsDBHandler Called -------")
+#	db, err := ConnectDb()
+#	if err != nil {
+#		return nil, utils.ErrorHandler(err, "error adding data")
+#	}
+#	defer db.Close()
+#	stmt, err := db.Prepare(utils.GenerateInsertQuery("execs", models.Exec{}))
+#	if err != nil {
+#		return nil, utils.ErrorHandler(err, "error adding data")
+#	}
+#	defer stmt.Close()
+#	fmt.Printf("Execs Add Handler")
+#
+#	addedExecs := make([]models.Exec, len(newExecs))
+	// previous code 
+	for i, newExec := range newExecs {
+
+		if newExec.Password == "" {
+			return nil, utils.ErrorHandler(errors.New("password is blank"), "please enter a password")
+		}
+
+		salt := make([]byte, 16)
+		_, err := rand.Read(salt)
+		if err != nil {
+			return nil, utils.ErrorHandler(errors.New("failed to generate salt"), "error adding data")
+		}
+
+		hash := argon2.IDKey([]byte(newExec.Password), salt, 1, 64*1024, 4, 32)
+		saltBase64 := base64.StdEncoding.EncodeToString(salt)
+		hashBase64 := base64.StdEncoding.EncodeToString(hash)
+		encodedHash := fmt.Sprintf("%s.%s", saltBase64, hashBase64)		
+		newExec.Password = encodedHash
+		
+		// rest of the code in the ADDExecDBHandler
+
+#		values := utils.GetStructValues(newExec)
+#		fmt.Println(newExec)
+#		fmt.Println("VALUES:", values)
+#		res, err := stmt.Exec(values...)
+#		if err != nil {
+#			return nil, utils.ErrorHandler(err, "error adding data")
+#		}
+#		lastID, err := res.LastInsertId()
+#		if err != nil {
+#			return nil, utils.ErrorHandler(err, "error adding data")
+#		}
+#		newExec.ID = int(lastID)
+#		addedExecs[i] = newExec
+	}
+	return addedExecs, nil
+}
+```

@@ -31,3 +31,6 @@ line-numbers = true     # displays line numbers for editable code
 [output.html.print]
 enable = true    # include support for printable output
 page-break = true # insert page-break after each chapter
+
+[output.html.code.hidelines]
+go = "#"

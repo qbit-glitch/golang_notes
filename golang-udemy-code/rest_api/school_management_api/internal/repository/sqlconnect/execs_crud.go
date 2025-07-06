@@ -1,7 +1,10 @@
 package sqlconnect
 
 import (
+	"crypto/rand"
 	"database/sql"
+	"encoding/base64"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,6 +12,8 @@ import (
 	"school_management_api/internal/models"
 	"school_management_api/pkg/utils"
 	"strconv"
+
+	"golang.org/x/crypto/argon2"
 )
 
 func GetExecsDbHandler(execs []models.Exec, r *http.Request) ([]models.Exec, error) {
@@ -80,6 +85,25 @@ func AddExecsDBHandler(newExecs []models.Exec) ([]models.Exec, error) {
 	addedExecs := make([]models.Exec, len(newExecs))
 
 	for i, newExec := range newExecs {
+
+		if newExec.Password == "" {
+			return nil, utils.ErrorHandler(errors.New("password is blank"), "please enter a password")
+		}
+
+		salt := make([]byte, 16)
+		_, err := rand.Read(salt)
+		if err != nil {
+			return nil, utils.ErrorHandler(errors.New("failed to generate salt"), "error adding data")
+		}
+
+		hash := argon2.IDKey([]byte(newExec.Password), salt, 1, 64*1024, 4, 32)
+		saltBase64 := base64.StdEncoding.EncodeToString(salt)
+		hashBase64 := base64.StdEncoding.EncodeToString(hash)
+
+		encodedHash := fmt.Sprintf("%s.%s", saltBase64, hashBase64)
+		
+		newExec.Password = encodedHash
+
 		values := utils.GetStructValues(newExec)
 		fmt.Println(newExec)
 
