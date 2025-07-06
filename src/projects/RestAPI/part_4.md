@@ -827,3 +827,97 @@ func teachersRouter() *http.ServeMux {
 }
 ```
 
+## Execs Router
+
+`router/execs_router.go`
+```go
+package router
+
+import (
+	"net/http"
+	"school_management_api/internal/api/handlers"
+)
+
+func execsRouter() *http.ServeMux {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("GET /execs", handlers.ExecsHandler)
+	mux.HandleFunc("POST /execs", handlers.ExecsHandler)
+	mux.HandleFunc("PATCH /execs", handlers.ExecsHandler)
+
+	mux.HandleFunc("GET /execs/{id}", handlers.ExecsHandler)
+	mux.HandleFunc("PATCH /execs/{id}", handlers.ExecsHandler)
+	mux.HandleFunc("DELETE /execs/{id}", handlers.ExecsHandler)
+	mux.HandleFunc("POST /execs/{id}/updatepassword", handlers.ExecsHandler)
+	
+	mux.HandleFunc("POST /execs/login", handlers.ExecsHandler)
+	mux.HandleFunc("POST /execs/logout", handlers.ExecsHandler)
+	mux.HandleFunc("POST /execs/forgotpassword", handlers.ExecsHandler)
+	mux.HandleFunc("POST /execs/resetpassword/reset/{resetcode}", handlers.ExecsHandler)
+	return mux
+}
+```
+
+`router/router.go`
+```go
+package router
+
+import (
+	"net/http"
+)
+
+func MainRouter() *http.ServeMux {
+
+	eRouter := execsRouter()
+	tRouter := teachersRouter()
+	sRouter := studentsRouter()
+	sRouter.Handle("/", eRouter)
+	tRouter.Handle("/", sRouter)
+	return tRouter
+}
+
+```
+
+
+## Execs Models and Database Table
+
+Create the execs database using this query:
+```sql
+CREATE TABLE IF NOT EXISTS execs (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	first_name VARCHAR(255) NOT NULL,
+	last_name VARCHAR(255) NOT NULL,
+	email VARCHAR(255) NOT NULL UNIQUE,
+	username VARCHAR(255) NOT NULL UNIQUE,
+	password VARCHAR(255) NOT NULL,
+	password_changed_at VARCHAR(255),
+	user_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	password_reset_token VARCHAR(255),
+	inactive_status BOOLEAN NOT NULL,
+	role VARCHAR(50) NOT NULL,
+	INDEX idx_email (email),
+	INDEX idx_username (username)
+);
+```
+
+`models/execs.go`
+```go
+package models
+
+import "database/sql"
+
+type Exec struct {
+	ID                  int
+	FirstName           string
+	LastName            string
+	Email               string
+	Username            string
+	Password            string
+	PasswordChangedAt   sql.NullString
+	UserCreatedAt       sql.NullString
+	PasswordResetCode   sql.NullString
+	PasswordCodeExpires sql.NullString
+	InactiveStatus      bool
+	Role                string
+}
+```
