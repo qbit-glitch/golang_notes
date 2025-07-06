@@ -1495,3 +1495,21 @@ func AddExecsDBHandler(newExecs []models.Exec) ([]models.Exec, error) {
 	return addedExecs, nil
 }
 ```
+
+## Authorization and Authentication
+
+Authentication is the process of verifying the identity of a user or system. When a user tries to  access an API, they must prove their identity, typically by providing credentials such as username and password and optionally maybe a token or a biometric signature. Some practical examples of authetication include:
+- Username and Passowrd
+- Tokens: After the intial login the server provides a token, a JWT which is a JSON web token and the user or the client includes this token in the subsequent requests.
+- Multifactor Authentication: It enhances security by requiring multiple forms of verification such as a password and a code sent to mobile.
+
+This process does not involve any decision about what actions you can perform. It only establishes your identity.
+
+Authorization is the process of determining what actions an authenticated user is allowed to perform. It defines permissions and access levels based on the user's role or attributes. Some practical examples are :
+- Role-Based Access Control (RBAC) : It assigns permissions to roles rather than to individual users. Fo example an admin role may have access to all resources while a user role has limited access.
+- Atttribute-Based Access Control (ABAC) : This uses attributes, example user attributes, resource attributes, environment conditions to determine access rights.
+- Access Control Lists (ACLs) : defines permissions for specific users or groups for various resources.
+
+When implementing authorization and authentication, it's essential to use strong and secure methods for verifying identity. Ensure that permissions are lightly controlled and regularly reviewed. Apply the principle of least privilege, granting only the necessary permission requried. And regularly audit and update both authentication and authorization mechanisms to maintain security.
+
+
