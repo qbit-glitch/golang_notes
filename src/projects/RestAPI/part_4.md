@@ -1561,3 +1561,54 @@ JWT (JSON Web Tokens) are a compact, URL safe token format for securely transmit
 From server to client, the server generates a JWT token and then sends it to the client, ususally in the response body or a cookie. Now from client to server, the client includes the JWT in the authorization header, commonly using the bearer schema of each request. The typical information that a JWT carries is userID to identify the user claims such as user roles, permissions and other metadata and expiration time to specify the token's validity period.
 
 Let's suppose that we logged in to an application successfully. The server generates a JWT containing user information and signs it. The server has to sign the JWT. The client then stores the JWT, usually in local storage or a cookie and includes it in authorization header of subsequent requests. The server then verifies the JWT signature and extracts the user information to authenticate and authorize the request.
+
+## Login Route - Part 1 : Data Validation
+
+`handlers/execs.go`
+```go
+
+func LoginHandler(w http.ResponseWriter, r *http.Request) {
+	var req models.Exec
+
+	// Data Validation
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	if req.Username == "" || req.Password == "" {
+		http.Error(w, "Username and password are required", http.StatusBadRequest)
+		return
+	}
+
+	// Search for user if user actually exists
+	db, err := sqlconnect.ConnectDb()
+	if err != nil {
+		utils.ErrorHandler(err, "error updating data")
+		http.Error(w, "error connecting to database", http.StatusBadRequest)
+		return
+	}
+	defer db.Close()
+
+	user := &models.Exec{}
+	err = db.QueryRow("SELECT id, first_name, last_name, email, username, password, inactive_status, role FROM execs WHERE username = ?", req.Username).Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Username, &user.Password, &user.InactiveStatus, &user.Role)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			utils.ErrorHandler(err, "user not found")
+			http.Error(w, "user not found", http.StatusBadRequest)
+			return
+		}
+		http.Error(w, "database query error", http.StatusBadRequest)
+		return
+	}
+	// is user active
+
+	// Verify password
+
+	// Generate Token
+
+	// Send token as a response or as a cookie
+}
+```

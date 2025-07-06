@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -8,6 +9,7 @@ import (
 	"net/http"
 	"school_management_api/internal/models"
 	"school_management_api/internal/repository/sqlconnect"
+	"school_management_api/pkg/utils"
 	"strconv"
 )
 
@@ -207,4 +209,50 @@ func DeleteOneExecHandler(w http.ResponseWriter, r *http.Request) {
 	// Return status of NoContent -> Compulsory
 	w.WriteHeader(http.StatusNoContent)
 
+}
+
+
+func LoginHandler(w http.ResponseWriter, r *http.Request) {
+	var req models.Exec
+
+	// Data Validation
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	if req.Username == "" || req.Password == "" {
+		http.Error(w, "Username and password are required", http.StatusBadRequest)
+		return
+	}
+
+	// Search for user if user actually exists
+	db, err := sqlconnect.ConnectDb()
+	if err != nil {
+		utils.ErrorHandler(err, "error updating data")
+		http.Error(w, "error connecting to database", http.StatusBadRequest)
+		return
+	}
+	defer db.Close()
+
+	user := &models.Exec{}
+	err = db.QueryRow("SELECT id, first_name, last_name, email, username, password, inactive_status, role FROM execs WHERE username = ?", req.Username).Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Username, &user.Password, &user.InactiveStatus, &user.Role)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			utils.ErrorHandler(err, "user not found")
+			http.Error(w, "user not found", http.StatusBadRequest)
+			return
+		}
+		http.Error(w, "database query error", http.StatusBadRequest)
+		return
+	}
+	// is user active
+
+	// Verify password
+
+	// Generate Token
+
+	// Send token as a response or as a cookie
 }
