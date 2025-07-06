@@ -1,37 +1,210 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
+	"school_management_api/internal/models"
+	"school_management_api/internal/repository/sqlconnect"
+	"strconv"
 )
 
-func ExecsHandler(w http.ResponseWriter, r *http.Request) {
-	// Find out what kind of http method that is sent with the request
-	fmt.Println(r.Method)
+func GetExecsHandler(w http.ResponseWriter, r *http.Request) {
 
-	switch r.Method {
-	case http.MethodGet:
-		w.Write([]byte("Hello GET method Execs Route"))
-	case http.MethodPost:
-		fmt.Println("Query:", r.URL.Query())
-		fmt.Println("Name:", r.URL.Query().Get("name"))
-
-		// Parse form data (necessary for x-www-form-urlencoded)
-		err := r.ParseForm()
-		if err != nil {
-			return
-		}
-		fmt.Println("Form from POST Method:", r.Form)
-
-		w.Write([]byte("Hello POST method Execs Route"))
-	case http.MethodPut:
-		w.Write([]byte("Hello PUT method Execs Route"))
-	case http.MethodPatch:
-		w.Write([]byte("Hello PATCH method Execs Route"))
-	case http.MethodDelete:
-		w.Write([]byte("Hello DELETE method Execs Route"))
+	var execs []models.Exec
+	execs, err := sqlconnect.GetExecsDbHandler(execs, r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
-	w.Write([]byte("Hello Execs Route"))
-	fmt.Println("Hello Execs Route")
+	response := struct {
+		Status string        `json:"status"`
+		Count  int           `json:"count"`
+		Data   []models.Exec `json:"data"`
+	}{
+		Status: "success",
+		Count:  len(execs),
+		Data:   execs,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+
+}
+
+func GetOneExecHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+
+	// Handle Path parameter
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		// fmt.Println(err)
+		http.Error(w, "invalid ID", http.StatusBadRequest)
+		return
+	}
+	exec, err := sqlconnect.GetExecByID(id)
+	if err != nil {
+		// fmt.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(exec)
+}
+
+func AddExecsHandler(w http.ResponseWriter, r *http.Request) {
+
+	var newExecs []models.Exec
+	var rawExecs []map[string]interface{}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Error reading request Body", http.StatusInternalServerError)
+		return
+	}
+	defer r.Body.Close()
+
+	err = json.Unmarshal(body, &newExecs)
+	if err != nil {
+		http.Error(w, "Invalid Request Body", http.StatusBadRequest)
+		return
+	}
+	fmt.Println(rawExecs)
+
+	fields := GetFieldNames(models.Exec{})
+
+	allowedFields := make(map[string]struct{})
+	for _, field := range fields {
+		allowedFields[field] = struct{}{}
+	}
+
+	for _, exec := range rawExecs {
+		for key := range exec {
+			_, ok := allowedFields[key]
+			if !ok {
+				http.Error(w, "Unacceptable field found in request. Only use allowed fields.", http.StatusBadRequest)
+			}
+		}
+	}
+
+	err = json.Unmarshal(body, &rawExecs)
+	if err != nil {
+		http.Error(w, "Invalid Request Body", http.StatusBadRequest)
+		fmt.Println("New Execs:", newExecs)
+		return
+	}
+
+	for _, exec := range newExecs {
+		err = CheckBlankFields(exec)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+
+	addedExecs, err := sqlconnect.AddExecsDBHandler(newExecs)
+	if err != nil {
+		// fmt.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+
+	response := struct {
+		Status string        `json:"status"`
+		Count  int           `json:"count"`
+		Data   []models.Exec `json:"data"`
+	}{
+		Status: "success",
+		Count:  len(addedExecs),
+		Data:   addedExecs,
+	}
+
+	json.NewEncoder(w).Encode(response)
+}
+
+// PATCH /execs/
+func PatchExecsHandler(w http.ResponseWriter, r *http.Request) {
+
+	var updates []map[string]interface{}
+	err := json.NewDecoder(r.Body).Decode(&updates)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	err = sqlconnect.PatchExecs(updates)
+	if err != nil {
+		// log.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// PATCH /execs/{id}
+func PatchOneExecHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Invalid Exec ID", http.StatusBadRequest)
+		return
+	}
+
+	var updates map[string]interface{}
+	err = json.NewDecoder(r.Body).Decode(&updates)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Invalid Request Payload", http.StatusBadRequest)
+		return
+	}
+
+	updatedExec, err := sqlconnect.PatchOneExec(id, updates)
+	if err != nil {
+		// log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(updatedExec)
+
+}
+
+func DeleteOneExecHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Invalid Exec ID", http.StatusBadRequest)
+		return
+	}
+
+	err = sqlconnect.DeleteOneExec(id)
+	if err != nil {
+		// log.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Response Body -> Optional
+	w.Header().Set("Content-Type", "application/json")
+	response := struct {
+		Status string `json:"status"`
+		ID     int    `json:"id"`
+	}{
+		Status: "Exec deleted successfully",
+		ID:     id,
+	}
+	json.NewEncoder(w).Encode(response)
+
+	// Return status of NoContent -> Compulsory
+	w.WriteHeader(http.StatusNoContent)
+
 }
