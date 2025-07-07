@@ -2001,3 +2001,26 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 ```
+
+## Logout
+
+Best practices:
+- First, clear the JWT cookie which means remove it from the client end.
+- Second, we can blacklist the JWT, which is optional. So if we are implementing a more secure system, we might want to keep a blacklist of invalidated JWTs, which can be done by storing the token in a databse or in-memory store like Redis and checking this blacklist in our middleware that handles authentication.
+
+Here we will implement only the first one.
+```go
+func LogoutHandler(w http.ResponseWriter, r *http.Request){
+	http.SetCookie(w, &http.Cookie{
+		Name:     "Bearer",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		Expires:  time.Unix(0,0),
+		SameSite: http.SameSiteStrictMode,
+	})
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"message": "Logged out succesfully"}`))
+}
+```
