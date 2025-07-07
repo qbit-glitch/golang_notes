@@ -1705,3 +1705,299 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	// Send token as a response or as a cookie
 }
 ```
+
+## Login Route - Part 3: JWT, Cookie
+
+First do testing with a random token string :
+```go
+func LoginHandler(w http.ResponseWriter, r *http.Request) {
+#	var req models.Exec
+
+	// Data Validation
+#	err := json.NewDecoder(r.Body).Decode(&req)
+#	if err != nil {
+#		http.Error(w, "Invalid request body", http.StatusBadRequest)
+#		return
+#	}
+#	defer r.Body.Close()
+#
+#	if req.Username == "" || req.Password == "" {
+#		http.Error(w, "Username and password are required", http.StatusBadRequest)
+#		return
+#	}
+#
+	// Search for user if user actually exists
+#	db, err := sqlconnect.ConnectDb()
+#	if err != nil {
+#		utils.ErrorHandler(err, "error updating data")
+#		http.Error(w, "error connecting to database", http.StatusBadRequest)
+#		return
+#	}
+#	defer db.Close()
+#
+#	user := &models.Exec{}
+#	err = db.QueryRow("SELECT id, first_name, last_name, email, username, password, inactive_status, role FROM execs WHERE username = ?", req.Username).Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Username, &user.Password, &user.InactiveStatus, &user.Role)
+#	if err != nil {
+#		if err == sql.ErrNoRows {
+#			utils.ErrorHandler(err, "user not found")
+#			http.Error(w, "user not found", http.StatusBadRequest)
+#			return
+#		}
+#		http.Error(w, "database query error", http.StatusBadRequest)
+#		return
+#	}
+#
+	// is user active
+#	if user.InactiveStatus {
+#		http.Error(w, "Account is inactive", http.StatusForbidden)
+#		return
+#	}
+
+	// Verify password
+#	parts := strings.Split(user.Password, ".")
+#	if len(parts) != 2 {
+#		utils.ErrorHandler(errors.New("invalid encoded hash format"), "invalid encoded hash format")
+#		http.Error(w, "invalid encoded hash format", http.StatusForbidden)
+#		return
+#	}
+#
+#	saltBase64 := parts[0]
+#	hashedPasswordBase64 := parts[1]
+#
+#	salt, err := base64.StdEncoding.DecodeString(saltBase64)
+#	if err != nil {
+#		utils.ErrorHandler(err, "failed to decode the salt")
+#		http.Error(w, "failed to decode the salt", http.StatusForbidden)
+#		return
+#	}
+#	
+#	hashedPassword, err := base64.StdEncoding.DecodeString(hashedPasswordBase64)
+#	if err != nil {
+#		utils.ErrorHandler(err, "failed to decode the hashed password")
+#		http.Error(w, "failed to decode the hased password", http.StatusForbidden)
+#		return
+#	}
+#
+#	hash := argon2.IDKey([]byte(req.Password), salt, 1, 64 * 1024, 4, 32)
+#
+#	if len(hash) != len(hashedPassword) {
+#		utils.ErrorHandler(errors.New("incorrect password"), "incorrect password")
+#		http.Error(w, "incorrect password", http.StatusForbidden)
+#		return
+#	}
+#
+#	if subtle.ConstantTimeCompare(hash, hashedPassword) == 1 {
+#		// do nothing
+#	} else {
+#		utils.ErrorHandler(errors.New("incorrect password"), "incorrect password")
+#		wl.Error(w, "incorrect password", http.StatusForbidden)
+#		return
+#	}
+#
+	// Generate Token
+	tokenString := "abd"
+
+	// Send token as a response or as a cookie
+	http.SetCookie(w, &http.Cookie{
+		Name: "Bearer",
+		Value: tokenString,
+		Path: "/",
+		HttpOnly: true,
+		Secure: true,
+		Expires: time.Now().Add(24 * time.Hour),
+	})
+
+	http.SetCookie(w, &http.Cookie{
+		Name: "tests",
+		Value: "testString",
+		Path: "/",
+		HttpOnly: true,
+		Secure: true,
+		Expires: time.Now().Add(24 * time.Hour),
+	})
+
+	w.Header().Set("Content-Type", "application/json")
+	response := struct {
+		Token string `json:"token"`
+	}{
+		Token: tokenString,
+	}
+	json.NewEncoder(w).Encode(response)
+
+	// Return status of NoContent -> Compulsory
+	w.WriteHeader(http.StatusNoContent)
+}
+```
+
+Now, add JWT_SECRET and JWT_EXPIRES_IN in `.env` file.
+```txt
+# ADD JWT TOKENS
+JWT_SECRET="secretString132"
+JWT_EXPIRES_IN=10s
+```
+
+`utils/jwt.go`
+```go
+package utils
+
+import (
+	"os"
+	"time"
+	"github.com/golang-jwt/jwt/v5"
+)
+
+func SignToken(userId int, username, role string) (string, error) {
+	jwtSecret := os.Getenv("JWT_SECRET")
+	jwtExpiresIn := os.Getenv("JWT_EXPIRES_IN")
+
+	claims := jwt.MapClaims{
+		"uid":  userId,
+		"user": username,
+		"role": role,
+	}
+	if jwtExpiresIn != "" {
+		duration, err := time.ParseDuration(jwtExpiresIn)
+		if err != nil {
+			return "", ErrorHandler(err, "Internal error")
+		}
+		claims["exp"] = jwt.NewNumericDate(time.Now().Add(duration))
+	} else {
+		claims["exp"] = jwt.NewNumericDate(time.Now().Add(15 * time.Minute))
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	signedToken, err := token.SignedString([]byte(jwtSecret))
+	if err != nil {
+		return "", ErrorHandler(err, "Internal error")
+	}
+	return signedToken, nil
+}
+```
+
+Final execs.go file
+```go
+
+func LoginHandler(w http.ResponseWriter, r *http.Request) {
+	var req models.Exec
+
+	// Data Validation
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	if req.Username == "" || req.Password == "" {
+		http.Error(w, "Username and password are required", http.StatusBadRequest)
+		return
+	}
+
+	// Search for user if user actually exists
+	db, err := sqlconnect.ConnectDb()
+	if err != nil {
+		utils.ErrorHandler(err, "error updating data")
+		http.Error(w, "error connecting to database", http.StatusBadRequest)
+		return
+	}
+	defer db.Close()
+
+	user := &models.Exec{}
+	err = db.QueryRow("SELECT id, first_name, last_name, email, username, password, inactive_status, role FROM execs WHERE username = ?", req.Username).Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Username, &user.Password, &user.InactiveStatus, &user.Role)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			utils.ErrorHandler(err, "user not found")
+			http.Error(w, "user not found", http.StatusBadRequest)
+			return
+		}
+		http.Error(w, "database query error", http.StatusBadRequest)
+		return
+	}
+
+	// is user active
+	if user.InactiveStatus {
+		http.Error(w, "Account is inactive", http.StatusForbidden)
+		return
+	}
+
+	// Verify password
+	parts := strings.Split(user.Password, ".")
+	if len(parts) != 2 {
+		utils.ErrorHandler(errors.New("invalid encoded hash format"), "invalid encoded hash format")
+		http.Error(w, "invalid encoded hash format", http.StatusForbidden)
+		return
+	}
+
+	saltBase64 := parts[0]
+	hashedPasswordBase64 := parts[1]
+
+	salt, err := base64.StdEncoding.DecodeString(saltBase64)
+	if err != nil {
+		utils.ErrorHandler(err, "failed to decode the salt")
+		http.Error(w, "failed to decode the salt", http.StatusForbidden)
+		return
+	}
+
+	hashedPassword, err := base64.StdEncoding.DecodeString(hashedPasswordBase64)
+	if err != nil {
+		utils.ErrorHandler(err, "failed to decode the hashed password")
+		http.Error(w, "failed to decode the hased password", http.StatusForbidden)
+		return
+	}
+
+	hash := argon2.IDKey([]byte(req.Password), salt, 1, 64*1024, 4, 32)
+
+	if len(hash) != len(hashedPassword) {
+		utils.ErrorHandler(errors.New("incorrect password"), "incorrect password")
+		http.Error(w, "incorrect password", http.StatusForbidden)
+		return
+	}
+
+	if subtle.ConstantTimeCompare(hash, hashedPassword) == 1 {
+		// do nothing
+	} else {
+		utils.ErrorHandler(errors.New("incorrect password"), "incorrect password")
+		http.Error(w, "incorrect password", http.StatusForbidden)
+		return
+	}
+
+	// Generate Token
+	tokenString, err := utils.SignToken(user.ID, req.Username, user.Role)
+	if err != nil {
+		http.Error(w, "Could not create login token", http.StatusInternalServerError)
+		return
+	}
+
+	// Send token as a response or as a cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "Bearer",
+		Value:    tokenString,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		Expires:  time.Now().Add(24 * time.Hour),
+	})
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "tests",
+		Value:    "testString",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		Expires:  time.Now().Add(24 * time.Hour),
+	})
+
+	w.Header().Set("Content-Type", "application/json")
+	response := struct {
+		Token string `json:"token"`
+	}{
+		Token: tokenString,
+	}
+	json.NewEncoder(w).Encode(response)
+
+	// Return status of NoContent -> Compulsory
+	w.WriteHeader(http.StatusNoContent)
+
+}
+```

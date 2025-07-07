@@ -15,6 +15,7 @@ import (
 	"school_management_api/pkg/utils"
 	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/crypto/argon2"
 )
@@ -217,7 +218,6 @@ func DeleteOneExecHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	var req models.Exec
 
@@ -278,7 +278,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to decode the salt", http.StatusForbidden)
 		return
 	}
-	
+
 	hashedPassword, err := base64.StdEncoding.DecodeString(hashedPasswordBase64)
 	if err != nil {
 		utils.ErrorHandler(err, "failed to decode the hashed password")
@@ -286,7 +286,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hash := argon2.IDKey([]byte(req.Password), salt, 1, 64 * 1024, 4, 32)
+	hash := argon2.IDKey([]byte(req.Password), salt, 1, 64*1024, 4, 32)
 
 	if len(hash) != len(hashedPassword) {
 		utils.ErrorHandler(errors.New("incorrect password"), "incorrect password")
@@ -303,6 +303,40 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate Token
+	tokenString, err := utils.SignToken(user.ID, req.Username, user.Role)
+	if err != nil {
+		http.Error(w, "Could not create login token", http.StatusInternalServerError)
+		return
+	}
 
 	// Send token as a response or as a cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "Bearer",
+		Value:    tokenString,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		Expires:  time.Now().Add(24 * time.Hour),
+	})
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "tests",
+		Value:    "testString",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		Expires:  time.Now().Add(24 * time.Hour),
+	})
+
+	w.Header().Set("Content-Type", "application/json")
+	response := struct {
+		Token string `json:"token"`
+	}{
+		Token: tokenString,
+	}
+	json.NewEncoder(w).Encode(response)
+
+	// Return status of NoContent -> Compulsory
+	w.WriteHeader(http.StatusNoContent)
+
 }
