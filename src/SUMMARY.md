@@ -69,6 +69,10 @@
     - [What is Backend Dev/ API/ Server Side](./informative_lectures/how_internet_works/backend_dev_server_side.md)
     - [HTTP-1/2/3, HTTPS](./informative_lectures/how_internet_works/http_123_https.md)
     - [Quiz-12: Internet Quiz](./informative_lectures/how_internet_works/quiz_12_internet_quiz.md)
+
+# Internview Notes
+
+- [Golang Interview Notes](interview_prep.md)
     
 
 

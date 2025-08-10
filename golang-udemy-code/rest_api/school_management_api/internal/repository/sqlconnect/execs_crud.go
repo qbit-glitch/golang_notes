@@ -1,10 +1,7 @@
 package sqlconnect
 
 import (
-	"crypto/rand"
 	"database/sql"
-	"encoding/base64"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -12,8 +9,7 @@ import (
 	"school_management_api/internal/models"
 	"school_management_api/pkg/utils"
 	"strconv"
-
-	"golang.org/x/crypto/argon2"
+	"time"
 )
 
 func GetExecsDbHandler(execs []models.Exec, r *http.Request) ([]models.Exec, error) {
@@ -86,23 +82,10 @@ func AddExecsDBHandler(newExecs []models.Exec) ([]models.Exec, error) {
 
 	for i, newExec := range newExecs {
 
-		if newExec.Password == "" {
-			return nil, utils.ErrorHandler(errors.New("password is blank"), "please enter a password")
-		}
-
-		salt := make([]byte, 16)
-		_, err := rand.Read(salt)
+		newExec.Password, err = utils.HashPassword(newExec.Password)
 		if err != nil {
-			return nil, utils.ErrorHandler(errors.New("failed to generate salt"), "error adding data")
+			return nil, utils.ErrorHandler(err, "error adding exec into databse")
 		}
-
-		hash := argon2.IDKey([]byte(newExec.Password), salt, 1, 64*1024, 4, 32)
-		saltBase64 := base64.StdEncoding.EncodeToString(salt)
-		hashBase64 := base64.StdEncoding.EncodeToString(hash)
-
-		encodedHash := fmt.Sprintf("%s.%s", saltBase64, hashBase64)
-		
-		newExec.Password = encodedHash
 
 		values := utils.GetStructValues(newExec)
 		fmt.Println(newExec)
@@ -270,8 +253,6 @@ func DeleteOneExec(id int) error {
 	return nil
 }
 
-
-
 func GetUserByUsername(username string) (*models.Exec, error) {
 	db, err := ConnectDb()
 	if err != nil {
@@ -285,10 +266,51 @@ func GetUserByUsername(username string) (*models.Exec, error) {
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, utils.ErrorHandler(err, "user not found")
-			
+
 		}
 		return nil, utils.ErrorHandler(err, "database error")
 
 	}
 	return user, nil
+}
+
+func UpdatePasswordInDb(userId int, currentPassword, newPassword string) (bool, error) {
+	db, err := ConnectDb()
+	if err != nil {
+		return false, utils.ErrorHandler(err, "database connection error")
+	}
+	defer db.Close()
+
+	var username string
+	var userPassword string
+	var userRole string
+
+	err = db.QueryRow("SELECT username, password, role FROM execs WHERE id = ?", userId).Scan(&username, &userPassword, &userRole)
+	if err != nil {
+		return false, utils.ErrorHandler(err, "user not found")
+	}
+
+	err = utils.VerifyPassword(currentPassword, userPassword)
+	if err != nil {
+		return false, utils.ErrorHandler(err, "The password you entered does not match the current password on the file.")
+	}
+
+	hashedPassword, err := utils.HashPassword(newPassword)
+	if err != nil {
+		return false, utils.ErrorHandler(err, "internal error")
+	}
+
+	currentTime := time.Now().Format(time.RFC3339)
+	_, err = db.Exec("UPDATE execs SET password = ?, password_changed_at = ? WHERE id = ?", hashedPassword, currentTime, userId)
+	if err != nil {
+		return false, utils.ErrorHandler(err, "failed to update the password")
+	}
+
+	// token, err := utils.SignToken(userId, username, userRole)
+	// if err != nil {
+	// 	utils.ErrorHandler(err, "Password updated. Could not create token")
+	// 	return
+	// }
+
+	return true, nil
 }
