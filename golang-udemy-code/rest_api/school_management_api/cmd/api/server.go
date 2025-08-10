@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	mw "school_management_api/internal/api/middlewares"
 	"school_management_api/internal/api/router"
 	"school_management_api/internal/repository/sqlconnect"
 
@@ -40,14 +41,16 @@ func main() {
 	// 	Whitelist:                   []string{"allowedParam"},
 	// }
 
-	mux := router.MainRouter()
+	// mux := router.MainRouter()
 	// secureMux := mw.Cors(rl.Middleware(mw.ResponseTimeMiddleware(mw.SecurityHeaders(mw.Compression(mw.Hpp(hppOptions)(mux))))))
 	// secureMux := utils.ApplyMiddlewares(mux, mw.Hpp(hppOptions), mw.Compression, mw.SecurityHeaders, mw.ResponseTimeMiddleware, rl.Middleware, mw.Cors)
-
+	router := router.MainRouter()
+	secureMux := mw.JWTMiddleware(mw.SecurityHeaders(router))
+	// secureMux := mw.SecurityHeaders(router)
 	// create custom server
 	server := &http.Server{
 		Addr:    port,
-		Handler: mux,
+		Handler: secureMux,
 		// Handler:   mw.SecurityHeaders(mux),
 		// Handler:   secureMux,
 		TLSConfig: tlsConfig,
