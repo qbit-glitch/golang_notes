@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"school_management_api/pkg/utils"
-
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -60,6 +59,7 @@ func JWTMiddleware(next http.Handler) http.Handler {
 			fmt.Println(claims["uid"], claims["exp"], claims["role"])
 		} else {
 			http.Error(w, "Invalid Login Token", http.StatusUnauthorized)
+			log.Println("Invalid Login Token: ", token.Value)
 			return
 		}
 
@@ -70,7 +70,7 @@ func JWTMiddleware(next http.Handler) http.Handler {
 		ctx = context.WithValue(ctx, ContextKey("userId"), claims["uid"])
 
 		fmt.Println(ctx)
-		
+
 		next.ServeHTTP(w, r.WithContext((ctx)))
 		fmt.Println("Sent Response from JWT Middleware")
 	})
