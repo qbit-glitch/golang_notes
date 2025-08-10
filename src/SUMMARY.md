@@ -58,6 +58,7 @@
 
     - [Part: 3](./projects/RestAPI/part_3.md)
     - [Part: 4](./projects/RestAPI/part_4.md)
+    - [Part: 5](./projects/RestAPI/part_5.md)
 
 
 # Informative Lecture Notes
