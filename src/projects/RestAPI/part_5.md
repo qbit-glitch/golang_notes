@@ -178,3 +178,28 @@ func ResetPasswordHandler(w http.ResponseWriter, r *http.Request){
 	fmt.Fprintln(w, "Password reset successfully")
 }
 ```
+
+
+## CSRF (Cross Site Request Forgery)
+
+- Cross Site Request Forgery
+- Stateless Nature
+- Token-based Authentication
+
+- Best Practices for CSRF Protection in APIs
+	- Use Same-Site Cookies
+	- Double Submit Cookies
+	- Custom Headers
+	- CSRF Tokens
+
+- Common Pitfalls in CSRF Protection
+	- Ignoring Stateless APIs
+	- Weak Token Generation
+	- Exposing Tokens
+
+Cross-Site Request Forgery is a type of attack where a malicious actor tricks a user into performing actions on a web-application, where they are authenticated without their knowledge. This can lead to unauthorized actions such as data theft, account manipulation, and other harmful operations. CSRF attacks exploits the trust of web-application has in a user's web browser. Without proper protection, any authenticated action like changing a password or making a transaction, can be performed without the user's consent. This compromises the integrity and security of the application and the user's data.
+
+While traditional web applications render HTML and manage user sessions, API often operate statelessly primarily using tokens for authentication. This makes CSRF slightly different in APIs. APIs do not maintain session states, reducing the direct risk of CSRF compared to stateful applications. APIs use tokens like JWT for authentication, which helps mitigate CSRF since token need to be included in each request explicitly. 
+
+CSRF protection is primarity needed for applications where the server and the client usually a web-browser, have a trust relationship and where the client needs to perform state changing operations like form submissions, which are authenticated by cookies or other mechanisms that the browser automatically includes with requests. If you are building a purely API based backed that does not directly interact with a web-browser, CSRF protection is generally not as necessary and there are some scenarios where CSRD is not typically needed.
+
