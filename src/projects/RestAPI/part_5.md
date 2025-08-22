@@ -101,3 +101,80 @@ func ForgotPasswordHandler(w http.ResponseWriter, r *http.Request){
 
 }
 ```
+
+## Reset Password using the Reset Link Generated
+
+Put the reset link generated in the above route in the postman and add the body fields of `new_password` and `confirm_password`. The code for implementing the above functionality looks like below, before refactoring.
+
+execs.go
+```go
+
+func ResetPasswordHandler(w http.ResponseWriter, r *http.Request){
+	token := r.PathValue("resetcode")
+
+	type request struct {
+		NewPassword string `json:"new_password"`
+		ConfirmPassword string `json:"confirm_password"`
+	}
+
+	var req request
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, "Invalid values in request", http.StatusBadRequest)
+		return
+	}
+
+	// TODO: Data validation for blank values
+	if req.NewPassword == "" && req.ConfirmPassword == "" {
+		http.Error(w, "Password cannot have empty values", http.StatusBadRequest)
+		return
+	}
+
+	if req.NewPassword != req.ConfirmPassword {
+		http.Error(w, "Passwords should match", http.StatusBadRequest)
+		return
+	}
+
+	bytes, err := hex.DecodeString(token)
+	if err != nil {
+		utils.ErrorHandler(err, "Internal Error")
+		return
+	}
+
+	hashedToken := sha256.Sum256(bytes)
+	hashedTokenString := hex.EncodeToString(hashedToken[:])
+
+
+	db, err := sqlconnect.ConnectDb()
+	if err != nil {
+		utils.ErrorHandler(err, "Internal Error")
+		return
+	}
+	defer db.Close()
+
+	var user models.Exec
+
+	query := "SELECT id, email FROM execs WHERE password_reset_token=? AND password_token_expires>?"
+	err = db.QueryRow(query, hashedTokenString, time.Now().Format(time.RFC3339)).Scan(&user.ID, &user.Email)
+	if err != nil {
+		utils.ErrorHandler(err, "Invalid or expired resetcode")
+		return
+	}
+
+	// Hash the new password
+	hashedPassword, err := utils.HashPassword(req.NewPassword)
+	if err!= nil {
+		utils.ErrorHandler(err, "internal error")
+		return
+	}
+
+	updateQuery := "UPDATE execs SET password=?, password_reset_token=NULL, password_token_expires=NULL, password_changed_at=? WHERE id=?"
+	_, err = db.Exec(updateQuery, hashedPassword, time.Now().Format(time.RFC3339), user.ID)
+	if err != nil {
+		utils.ErrorHandler(err, "Internal Error")
+		return
+	}
+
+	fmt.Fprintln(w, "Password reset successfully")
+}
+```
