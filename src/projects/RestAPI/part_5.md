@@ -203,3 +203,111 @@ While traditional web applications render HTML and manage user sessions, API oft
 
 CSRF protection is primarity needed for applications where the server and the client usually a web-browser, have a trust relationship and where the client needs to perform state changing operations like form submissions, which are authenticated by cookies or other mechanisms that the browser automatically includes with requests. If you are building a purely API based backed that does not directly interact with a web-browser, CSRF protection is generally not as necessary and there are some scenarios where CSRD is not typically needed.
 
+
+## Add Pagination to the Students Route
+
+students.go
+
+```go
+
+func GetStudentsHandler(w http.ResponseWriter, r *http.Request) {
+
+	var students []models.Student
+
+	// Implementing the pagination
+	// url?limit=x&page=y
+	// database will-leave/ will-not show calculated entries from the begining. (page-1) * limit ((1-1)*50 = 0*50 = 0)
+	// page y => (y-1) * x, next x entries
+	page, limit := getPaginationParams(r)
+
+	students, totalStudents, err := sqlconnect.GetStudentsDbHandler(students, r, limit, page)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	response := struct {
+		Status   string           `json:"status"`
+		Count    int              `json:"count"`
+		Page     int              `json:"page"`
+		PageSize int              `json:"page_size"`
+		Data     []models.Student `json:"data"`
+	}{
+		Status:   "success",
+		Count:    totalStudents,
+		Page:     page,
+		PageSize: limit,
+		Data:     students,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+
+}
+
+func getPaginationParams(r *http.Request) (int, int) {
+	page, err := strconv.Atoi(r.URL.Query().Get("page"))
+	if err != nil {
+		page = 1
+	}
+
+	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
+	if err != nil {
+		limit = 10
+	}
+	return page, limit
+}
+
+```
+
+students_crud.go
+
+```go
+
+func GetStudentsDbHandler(students []models.Student, r *http.Request, limit, page int) ([]models.Student, int, error) {
+	db, err := ConnectDb()
+	if err != nil {
+		return nil, 0, utils.ErrorHandler(err, "error retrieving data")
+	}
+	defer db.Close()
+
+	query := "SELECT id, first_name, last_name, email, class FROM students WHERE 1=1"
+	var args []interface{}
+
+	query, args = utils.AddFilters(r, query, args)
+
+	// Add Pagination
+	offset := (page - 1) * limit
+	query += " LIMIT ? OFFSET ? "
+	args = append(args, limit, offset)
+
+
+	query = utils.AddSorting(r, query)
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		fmt.Println("err")
+		return nil, 0, utils.ErrorHandler(err, "error retrieving data")
+	}
+	defer rows.Close()
+	for rows.Next() {
+		student := models.Student{}
+		err = rows.Scan(&student.ID, &student.FirstName, &student.LastName, &student.Email, &student.Class)
+		if err != nil {
+
+			return nil, 0, utils.ErrorHandler(err, "error retrieving data")
+		}
+		students = append(students, student)
+	}
+
+	// Get the total count of students
+	var totalStudents int
+	err = db.QueryRow("SELECT COUNT(*) FROM students").Scan(&totalStudents)
+	if err != nil {
+		utils.ErrorHandler(err, "")
+		totalStudents = 0
+	}
+
+	return students, totalStudents, nil
+}
+
+```
