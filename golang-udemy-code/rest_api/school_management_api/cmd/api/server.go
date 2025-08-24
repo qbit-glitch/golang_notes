@@ -8,6 +8,8 @@ import (
 	mw "school_management_api/internal/api/middlewares"
 	"school_management_api/internal/api/router"
 	"school_management_api/internal/repository/sqlconnect"
+	"school_management_api/pkg/utils"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -32,14 +34,14 @@ func main() {
 		MinVersion: tls.VersionTLS12,
 	}
 
-	// rl := mw.NewRateLimiter(5, time.Minute)
+	rl := mw.NewRateLimiter(5, time.Minute)
 
-	// hppOptions := mw.HPPOptions{
-	// 	CheckQuery:                  true,
-	// 	CheckBody:                   true,
-	// 	CheckBodyOnlyForContentType: "application/x-www-form-urlencoded",
-	// 	Whitelist:                   []string{"allowedParam"},
-	// }
+	hppOptions := mw.HPPOptions{
+		CheckQuery:                  true,
+		CheckBody:                   true,
+		CheckBodyOnlyForContentType: "application/x-www-form-urlencoded",
+		Whitelist:                   []string{"sortBy", "sortOrder", "name", "age", "class"},
+	}
 
 	// mux := router.MainRouter()
 	// secureMux := mw.Cors(rl.Middleware(mw.ResponseTimeMiddleware(mw.SecurityHeaders(mw.Compression(mw.Hpp(hppOptions)(mux))))))
@@ -47,8 +49,9 @@ func main() {
 	router := router.MainRouter()
 
 	jwtMiddleware := mw.MiddlewaresExcludePaths(mw.JWTMiddleware, "/execs/login", "/execs/forgotpassword", "/execs/resetpassword/reset")
-
-	secureMux := jwtMiddleware(mw.SecurityHeaders(router))
+	
+	secureMux := utils.ApplyMiddlewares(router, mw.SecurityHeaders, mw.Compression, mw.Hpp(hppOptions), mw.XSSMiddleware, jwtMiddleware, mw.ResponseTimeMiddleware, rl.Middleware, mw.Cors)
+	// secureMux := jwtMiddleware(mw.SecurityHeaders(router))
 	// secureMux := mw.SecurityHeaders(router)
 	// secureMux := mw.XSSMiddleware(router)
 	// create custom server

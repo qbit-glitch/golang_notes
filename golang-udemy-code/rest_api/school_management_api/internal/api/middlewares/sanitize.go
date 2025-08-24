@@ -56,7 +56,7 @@ func XSSMiddleware(next http.Handler) http.Handler {
 		fmt.Println("Updated URL:", r.URL.String())
 
 		// Sanitize request body
-		if r.Header.Get("Content-Type") == "appplication/json" {
+		if r.Header.Get("Content-Type") == "application/json" {
 			if r.Body != nil {
 				bodyBytes, err := io.ReadAll(r.Body)
 				if err != nil {
