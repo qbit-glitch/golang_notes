@@ -580,3 +580,9 @@ Code Obfuscation is the process of deliberately making source code or binary cod
 - Over-Obfuscation
 - Ignoring Security Best Practices
 - Obfuscation does not guarantee protection against determined attackers. It's essential to remain vigilant and continuously assess security. 
+
+## Adjustments before final binary
+
+When we deploy our API, our certificate and key are going to be placed in a specific folder and our application binary is going to use the certificate and key from that location. So we need to det the path to our certificate and key be known to our API binary. And usually the path to your certificate and key will be stored in the environment variable. Certificate file path is going to start from the root folder. 
+
+We will be deploying it on our computer for testing purposes. So in that case, we can `embed` this .env file along with the binary.
