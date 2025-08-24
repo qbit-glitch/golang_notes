@@ -545,3 +545,38 @@ func AuthorizeUser(userRole string, allowedRoles ...string) (bool, error){
 	return false, errors.New(("user not authorized"))
 }
 ```
+
+
+## Code Obfuscation
+
+Code Obfuscation is the process of deliberately making source code or binary code difficult to understand. This is achieved through techniques that transform the code into a less readable form while preserving its functionality. The main goal is to protect intellectual property and prevent reverse engineering or unauthorized access to the code's logic. 
+
+**Why is code obfuscation so important ?**
+
+- Protection of Intellectual Property : Companies invest significant resources in developing their software. Obfuscation helps protect this investment by making it harder for competitors to copy or steal proprietary algorithms and logic.
+
+- Security Enhancement : Obfuscation adds an extra layer of security by making it more challenging for attackers to analyze the code and identify vulnerabilities. While not a substitute for robust security practices, it can deter casual attackers. 
+
+- Compliance: Certain industries mau have regulations that require protecting sensitive data or intellectual property, making obfuscation a compliance necessity. 
+
+- Sensitive Logic: Code Obfuscation is particularly relevant for APIs or server binary files because APIs contain business logic, authentication mechanisms and data processing algorithms that, if exposed could lead to security breaches.
+
+- Preventing Reverse Engineering: Binary files still can be reverse engineered to reveal sensitive information. Obfuscation makes this process mroe difficult. 
+
+- Reducing Attack Surface: By obscuring the code, it helps reducae the attack surface, as attackers may find it harder to understand how to exploit vulnerabilities.
+
+**Cons of Code Obfuscation :**
+- Performance Overhead: It can introduce performance overhead, potentially slowing down execution. 
+- Debugging Difficulty: Obfuscated code can be challenging to debug and maintain, making it harder for developers to troubleshoot issues. 
+- Not Foolproof : Skilled attackers can still reverse engineer obfuscated code, making it a deterrent but not a complete solution. 
+
+**Best Practices**
+- Use Established Tools
+- Combine with other Security Practices.
+- Keep backups: DO maintain original unobfuscated versions of the code for development and maintenance purposes. 
+- Evaluate Performance / Benchmarking
+
+*Common Pitfalls*
+- Over-Obfuscation
+- Ignoring Security Best Practices
+- Obfuscation does not guarantee protection against determined attackers. It's essential to remain vigilant and continuously assess security. 
