@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"school_management_api/internal/models"
 	"school_management_api/internal/repository/sqlconnect"
+	"school_management_api/pkg/utils"
 	"strconv"
 	// "sync"
 )
@@ -289,10 +290,17 @@ func GetStudentsByTeacherId(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetStudentCountByTeacherId(w http.ResponseWriter, r *http.Request) {
+	// admin, manager, exec
+	_, err := utils.AuthorizeUser(r.Context().Value(utils.ContextKey("role")).(string), "admin", "exec", "manager")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	
 	teacherId := r.PathValue("id")
 	var studentCount int
 
-	studentCount, err := sqlconnect.GetStudentCountByTeacherIdFromDb(teacherId)
+	studentCount, err = sqlconnect.GetStudentCountByTeacherIdFromDb(teacherId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

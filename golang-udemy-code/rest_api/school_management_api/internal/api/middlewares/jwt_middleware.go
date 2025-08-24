@@ -11,7 +11,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-type ContextKey string
+
 
 func JWTMiddleware(next http.Handler) http.Handler {
 	fmt.Println("---------- JWT Middleware ---------")
@@ -64,10 +64,10 @@ func JWTMiddleware(next http.Handler) http.Handler {
 		}
 
 		// Now use context to carry the claim information accross different middlewares, accross different functions
-		ctx := context.WithValue(r.Context(), ContextKey("role"), claims["role"])
-		ctx = context.WithValue(ctx, ContextKey("expiresAt"), claims["exp"])
-		ctx = context.WithValue(ctx, ContextKey("username"), claims["user"])
-		ctx = context.WithValue(ctx, ContextKey("userId"), claims["uid"])
+		ctx := context.WithValue(r.Context(), utils.ContextKey("role"), claims["role"])
+		ctx = context.WithValue(ctx, utils.ContextKey("expiresAt"), claims["exp"])
+		ctx = context.WithValue(ctx, utils.ContextKey("username"), claims["user"])
+		ctx = context.WithValue(ctx, utils.ContextKey("userId"), claims["uid"])
 
 		fmt.Println(ctx)
 
