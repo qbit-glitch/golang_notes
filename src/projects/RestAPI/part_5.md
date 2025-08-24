@@ -311,3 +311,218 @@ func GetStudentsDbHandler(students []models.Student, r *http.Request, limit, pag
 }
 
 ```
+
+## Data Sanitization - XSS Middleware
+
+Sanitization is the process of cleaning and filtering user input to prevent the introduction of malicious data into a system.  This practice is essential in safeguarding applications from various security threats such as SQL injection, cross-site scripting and other forms of injection attacks. 
+
+Data sanization plays a significant role in securing our API. 
+- It protects against injection attacks by removing or escaping harmful characters. 
+- It ensures that data confirms to expected formats and content maintaining system integrity.
+- It prevents malicious data from degrading system performance.
+
+Data Sanitization is crucial on the server side to ensure that all data Entering the system is clean and safe. And while it's important to sanitize data on the client side for user-feedback and immediate security, it should not be solely relied upon as client side sanitization can be bypassed.
+
+*Importance*
+- Security
+- Integrity
+- Performance
+
+*Areas Of Application*
+- API / Server-Side
+- Frontend Development
+
+*Data Sanitization in APIs / Server-Side Development*
+- Input Sanitization
+- Output Sanitization
+- Database Interaction
+
+*How Data Sanitization is Implemented*
+- Escaping : `>` to `&gt`, `<` to `&lt`
+- Validation :  checking if an email address has a valid format before sending it to the database.
+- Encoding : transform data into a safe format. Encoding data to be safely included in htmls or urls.
+- Whitelist Filtering : allowing only known safe data to passthrough. eg: restricting input to only alphabetic characters for a name field.
+
+*Best Practices*
+- Sanitize all user inputs
+- Use established libraries
+- Sanitize at Multiple Layers
+- Contextual Escaping
+- Regularly Update
+
+*Common Pitfalls*
+- Relying Solely on client-side sanitization
+- Incomplete Sanitization
+- Improper Context Handling
+- Neglecting Output Sanitization
+- Over-Sanitization
+
+*Examples of Data Sanitization*
+- Preventing SQL Injection
+- Preventing XSS
+- Preventing URL Injection
+
+
+io.ReadCloser vs io.Reader : An instance of io.ReadCloser needs to be read and it needs to be closed as well once it is read. So we have read method associated with io.ReadCloser as well as Close method assosciated with io.ReadCloser. 
+
+```go
+package middlewares
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"net/url"
+	"school_management_api/pkg/utils"
+	"strings"
+	"github.com/microcosm-cc/bluemonday"
+)
+
+func XSSMiddleware(next http.Handler) http.Handler {
+	fmt.Println("++++++++++++ Initializing XSSMiddleware +++++++++++")
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("+++++++++++++++ XSS Middleware Ran ")
+
+		// Sanitize the URL Path
+		sanitizePath, err := clean(r.URL.Path)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		fmt.Println("Original Path:", r.URL.Path)
+		fmt.Println("Sanitized Path:", sanitizePath)
+
+		// Sanitize the query Params
+		params := r.URL.Query()
+		sanitizedQuery := make(map[string][]string)
+		for key, values := range params {
+			sanitizedKey, err := clean(key)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			var sanitizedValues []string
+			for _, value := range values {
+				cleanValue, err := clean(value)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusBadRequest)
+					return
+				}
+				sanitizedValues = append(sanitizedValues, cleanValue.(string))
+			}
+			sanitizedQuery[sanitizedKey.(string)] = sanitizedValues
+			fmt.Printf("Original Query %s: %s\n", key, strings.Join(values, ", "))
+			fmt.Printf("Sanitized Query %s: %s\n", sanitizedKey, strings.Join(sanitizedValues, ", "))
+		}
+
+		r.URL.Path = sanitizePath.(string)
+		r.URL.RawQuery = url.Values(sanitizedQuery).Encode()
+		fmt.Println("Updated URL:", r.URL.String())
+
+		// Sanitize request body
+		if r.Header.Get("Content-Type") == "appplication/json" {
+			if r.Body != nil {
+				bodyBytes, err := io.ReadAll(r.Body)
+				if err != nil {
+					http.Error(w, utils.ErrorHandler(err, "Error reading request body").Error(), http.StatusBadRequest)
+					return
+				}
+				bodyString := strings.TrimSpace(string(bodyBytes))
+				fmt.Println("Original Body:", bodyString)
+
+				// Reset the request Body
+				r.Body = io.NopCloser(bytes.NewReader([]byte(bodyString)))
+
+				if len(bodyString) > 0 {
+					var inputData interface{}	
+					err := json.NewDecoder(bytes.NewReader([]byte(bodyString))).Decode(&inputData)
+					if err != nil {
+						http.Error(w, utils.ErrorHandler(err, "Invalid JSON body").Error(), http.StatusBadRequest)
+						return
+					}
+					fmt.Println("Original JSON data:", inputData)
+
+					// Sanitize the JSON body
+					sanitizedData, err := clean(inputData)
+					if err != nil {
+						http.Error(w, err.Error(), http.StatusBadRequest)
+						return
+					}
+					fmt.Println("Sanitized JSON data:", sanitizedData)
+
+					// Marshall the sanitized data back to the body
+					sanitizedBody, err := json.Marshal(sanitizedData)
+					if err != nil {
+						http.Error(w, utils.ErrorHandler(err, "Error sanitizing body").Error(), http.StatusBadRequest)
+						return
+					}
+
+					r.Body = io.NopCloser(bytes.NewReader(sanitizedBody))
+					fmt.Println("Sanitized body:", string(sanitizedBody))
+
+				} else {
+					log.Println("Request body is empty")
+				}
+
+			} else {
+				log.Println("No body in the request")
+			}
+		} else if r.Header.Get("Content-Type") != "" {
+			log.Printf("Received request with unsupported Content-Type: %s. Expected application/json.\n", r.Header.Get("Content-Type"))
+			http.Error(w, "Unsupported Content-Type. please use application/json.", http.StatusUnsupportedMediaType)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+		fmt.Println("Sending response from XSSMiddleware Ran")
+	})
+}
+
+// Clean sanitizes input data to prevent XSS attacks
+func clean(data interface{}) (interface{}, error) {
+	switch v := data.(type) {
+	case map[string]interface{}:
+		for key, value := range v {
+			v[key] = sanitizeValue(value)
+		}
+		return v, nil
+	case []interface{}:
+		for i, value := range v {
+			v[i] = sanitizeValue(value)
+		}
+		return v, nil
+	case string:
+		return sanitizeString(v), nil
+	default:
+		// Error
+		return nil, utils.ErrorHandler(fmt.Errorf("unsupported type: %T", data), fmt.Sprintf("unsupported type: %T", data))
+	}
+}
+
+func sanitizeValue(data interface{}) interface{} {
+	switch v := data.(type) {
+	case string:
+		return sanitizeString(v)
+	case map[string]interface{}:
+		for k, value := range v {
+			v[k] = sanitizeValue(value)
+		}
+		return v
+	case []interface{}:
+		for i, value := range v {
+			v[i] = sanitizeValue(value)
+		}
+		return v
+	default:
+		return v
+	}
+}
+
+func sanitizeString(value string) string {
+	return bluemonday.UGCPolicy().Sanitize(value)
+}
+```
