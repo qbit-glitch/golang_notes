@@ -71,6 +71,12 @@
     - [HTTP-1/2/3, HTTPS](./informative_lectures/how_internet_works/http_123_https.md)
     - [Quiz-12: Internet Quiz](./informative_lectures/how_internet_works/quiz_12_internet_quiz.md)
 
+# Protocol Buffers
+
+- [Protocol Buffers](./protocol_buffers/protocol_buffers_1.md)
+
+
+
 # Internview Notes
 
 - [Golang Interview Notes](interview_prep.md)

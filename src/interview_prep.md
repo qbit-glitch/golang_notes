@@ -27,12 +27,12 @@ Answer: An array is a fixed-size collection of elements of the same type, define
 
 6. What is a struct in Go, and how do you define one?
 Answer: A struct in Go is a composite data type that groups together variables (fields) under a single name. Structs are used to model complex data. You define a struct using the type keyword. For example:
-
+```go
 type Person struct {
 Name string
 Age int
 }
-
+```
 
 7. How does garbage collection work in Go?
 Answer: Go uses a concurrent garbage collector that automatically manages memory allocation and deallocation. It identifies and frees up memory occupied by objects that are no longer reachable or referenced by the program. The garbage collector runs in the background, allowing developers to focus on writing code without manual memory management.
@@ -40,17 +40,14 @@ Answer: Go uses a concurrent garbage collector that automatically manages memory
 8. What are the zero values of different data types in Go?
 Answer: In Go, each data type has a default zero value when declared without initialization:
 
+``` go
 int: 0
-
 float64: 0.0
-
 string: ""
-
 bool: false
-
 pointer: nil
-
 slice, map, channel: nil Structs have zero values for all their fields.
+```
 
 9. What is the purpose of the defer statement in Go?
 Answer: The defer statement is used to schedule a function call to be executed after the surrounding function completes, regardless of whether it exits normally or through a panic. This is useful for resource cleanup tasks, such as closing files or releasing locks. Deferred calls are executed in last-in-first-out order.
