@@ -183,3 +183,30 @@ message OldPerson{
 - use meaningful names
 - keep messages focused
 - plan for evolution
+
+
+## Fields in Protocol buffers
+
+Fields are the fundamental building blocks of messages in protocol buffers, and understanding how to define and use them is crucial for effective data serialization in Protocol buffers. A Field is a key value pair withing a message that represents a piece of data. Each field has a unique number, a data type and a name. Fields are used to define the structure of the data you want to serialize. 
+
+Field type includes the data type of the field such as int32, string or bool. Field name is the identifier for the field following standard naming conventions usually snakecase. Field number is a unique positive integers assigned to the field, which is used for serialization. 
+
+*Fields*
+```proto
+<field_type> <field_name> = <field_number>;
+```
+
+*Field Options*
+- In `proto2`, fields could be marked as `required` or `optional`. In `proto3` all fields are optional by default.
+- Use `repeated` to define a field that can contain multiple values of the same type.
+- You can specify additional options such as `deafult`, `packed ` and more.
+
+*Field Numbers*
+- Use numbers between 1 and 15 for frequently used fields, as these require only one byte in the binary encoding.
+- Use numbers between 16 and 2047 for less frequently used fields.
+- Avoid changing field numbers once they are assigned, as this can lead to incompatability with serialized data. 
+
+*Best Practices*
+- Use meaningful names
+- avoid reserved field names
+
