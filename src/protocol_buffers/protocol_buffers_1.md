@@ -145,3 +145,41 @@ message User {
 Using packages is essential to prevent naming conflicts in large code bases. For instance if you have multiple messages with the same name in different .proto files, using ensures that they can coexist without issues. In this case, both user messages can exist because they are in different packages.
 
 In summary, packages in Protocol buffers are crucila for organizing your data structures, preventing naming conflicts and maintaining a clean code base. By following best practices in package naming and usagem you can create well structured and maintainable Protocol Buffers projects.
+
+
+## Messages in Protocol Buffers
+
+Messages are the code data structures used in Protocol buffers to represent and serialize structured data. Understanding how to define and use messages is fundamental to effectively utilizing protocol buffers in our applications. 
+
+A Message in Protocol Buffer is a logical container for structured data. It allows you to define a set of fields, each with a specific type and purpose. Messages can represent complex data structures and are used to facilitate communication between systems. To define a message in a .proto file, use the `message` keyword followed by the message name and a block containing its fields. 
+
+**Messages**
+```proto
+syntax = "proto3"
+package example;
+
+// Defining a message
+message Person{
+    string name = 1;    // Field 1
+    int32 id = 2;       // Field 2
+    string email = 3;   // Field 3
+}
+```
+
+*A message can have the following components :*
+- Field Declarations
+- Nested Messages
+- Enumerations
+
+*Message Options*
+```proto
+message OldPerson{
+    option deprecated = true;   // This message is deprecated
+    string name = 1;
+}
+```
+
+*Best Practices for Messages*
+- use meaningful names
+- keep messages focused
+- plan for evolution
